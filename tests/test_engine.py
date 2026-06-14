@@ -77,6 +77,53 @@ class TestBlendCalculator:
         props = calc.calculate([(gum, 0.05), (flour, 0.95)])
         assert abs(props.hydrocolloid_pct - 0.05) < 1e-6
 
+    def test_nutritional_computation(self):
+        i1 = Ingredient(
+            name="Rice",
+            category="flour",
+            protein_pct=6.0,
+            starch_pct=80.0,
+            fat_pct=1.0,
+            fiber_pct=2.0,
+            kcal_per_100g=366.0,
+            sugars_pct=0.1,
+            saturated_fat_pct=0.4,
+            sodium_mg_per_100g=0.0,
+        )
+        i2 = Ingredient(
+            name="Almond",
+            category="flour",
+            protein_pct=21.2,
+            starch_pct=20.0,
+            fat_pct=49.5,
+            fiber_pct=12.5,
+            kcal_per_100g=579.0,
+            sugars_pct=4.4,
+            saturated_fat_pct=3.8,
+            sodium_mg_per_100g=1.0,
+        )
+
+        calc = BlendCalculator()
+        props = calc.calculate([(i1, 0.7), (i2, 0.3)])
+
+        assert abs(props.kcal_per_100g - (366.0 * 0.7 + 579.0 * 0.3)) < 1e-6
+        assert abs(props.sugars_pct - (0.1 * 0.7 + 4.4 * 0.3)) < 1e-6
+        assert abs(props.saturated_fat_pct - (0.4 * 0.7 + 3.8 * 0.3)) < 1e-6
+        assert abs(props.sodium_mg_per_100g - (0.0 * 0.7 + 1.0 * 0.3)) < 1e-6
+
+    def test_nutritional_defaults_when_missing(self):
+        ing = Ingredient(
+            name="Rice",
+            category="flour",
+            protein_pct=6.0,
+        )
+        calc = BlendCalculator()
+        props = calc.calculate([(ing, 1.0)])
+        assert props.kcal_per_100g == 0.0
+        assert props.sugars_pct == 0.0
+        assert props.saturated_fat_pct == 0.0
+        assert props.sodium_mg_per_100g == 0.0
+
 
 class TestFermentationSimulator:
     def test_simulate_returns_result(self):

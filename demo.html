@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glutenix — Risultati</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #1a1a2e; padding: 2rem; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: .25rem; }
+  .subtitle { color: #666; margin-bottom: 2rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); text-align: center; }
+  .card .num { font-size: 2.4rem; font-weight: 700; color: #2563eb; }
+  .card .label { font-size: .85rem; color: #666; margin-top: .3rem; }
+  .card.green .num { color: #16a34a; }
+  .card.amber .num { color: #d97706; }
+  .card.purple .num { color: #7c3aed; }
+  .card.rose .num { color: #e11d48; }
+
+  section { background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  section h2 { font-size: 1.2rem; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 2px solid #2563eb; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: .9rem; }
+  th { font-weight: 600; color: #444; background: #f9fafb; }
+  .tag { display: inline-block; padding: .15rem .6rem; border-radius: 99px; font-size: .75rem; font-weight: 600; }
+  .tag.pass { background: #dcfce7; color: #166534; }
+  .tag.build { background: #dbeafe; color: #1e40af; }
+  .tag.ml { background: #f3e8ff; color: #6b21a8; }
+  .tag.api { background: #fef3c7; color: #92400e; }
+  .bar { display: flex; height: 1.6rem; border-radius: 6px; overflow: hidden; margin: .5rem 0; }
+  .bar-seg { display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 600; color: #fff; }
+  .architecture { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .5rem; }
+  .arch-box { padding: .5rem 1rem; border-radius: 8px; font-size: .85rem; font-weight: 500; }
+  .arch-box.db { background: #dbeafe; color: #1e40af; }
+  .arch-box.engine { background: #fef3c7; color: #92400e; }
+  .arch-box.ml { background: #f3e8ff; color: #6b21a8; }
+  .arch-box.bo { background: #d1fae5; color: #065f46; }
+  .arch-box.api { background: #fce4ec; color: #880e4f; }
+  .arch-box.ui { background: #e0f2fe; color: #0c4a6e; }
+  .arrow { color: #999; font-size: 1.2rem; margin: 0 .2rem; }
+  ul { padding-left: 1.2rem; font-size: .9rem; line-height: 1.8; }
+  footer { text-align: center; color: #999; font-size: .8rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Glutenix</h1>
+  <p class="subtitle">Simulatore e ottimizzatore di farine senza glutine — Risultati ottenuti</p>
+
+  <!-- KPI cards -->
+  <div class="grid">
+    <div class="card green"><div class="num">60</div><div class="label">Test superati</div></div>
+    <div class="card"><div class="num">6</div><div class="label">Pacchetti</div></div>
+    <div class="card amber"><div class="num">6</div><div class="label">Tabelle DB</div></div>
+    <div class="card purple"><div class="num">9</div><div class="label">Feature GPR</div></div>
+    <div class="card rose"><div class="num">17</div><div class="label">Ingredienti seed</div></div>
+    <div class="card"><div class="num">19</div><div class="label">API endpoints</div></div>
+  </div>
+
+  <!-- Architettura -->
+  <section>
+    <h2>Architettura</h2>
+    <div class="architecture">
+      <span class="arch-box db">glutenix.db</span><span class="arrow">→</span>
+      <span class="arch-box engine">glutenix.engine</span><span class="arrow">→</span>
+      <span class="arch-box ml">glutenix.ml</span><span class="arrow">→</span>
+      <span class="arch-box bo">glutenix.bo</span><span class="arrow">→</span>
+      <span class="arch-box api">glutenix.api</span><span class="arrow">→</span>
+      <span class="arch-box ui">glutenix.ui</span>
+    </div>
+    <p style="margin-top:.8rem;font-size:.85rem;color:#666;">
+      <strong>glutenix.db</strong> — 6 tabelle (ingredienti, applicazioni, blend, risultati simulazione/esperimenti) + seed da 17 ingredienti reali<br>
+      <strong>glutenix.engine</strong> — BlendCalculator, FermentationSimulator (ODE Michaelis-Menten), BakingSimulator (PDE diffusione 1D)<br>
+      <strong>glutenix.ml</strong> — PhysicsGPR (ExactGP + ScaleKernel + RBF-ARD), training loop con early stopping e validazione<br>
+      <strong>glutenix.bo</strong> — BayesianOptimizer (BoTorch qLogNEHVI/qLogEI), ARD feature importance, partial dependence<br>
+      <strong>glutenix.api</strong> — FastAPI, 6 router: ingredienti, applicazioni, blend, simulazione, predizione, ottimizzazione
+    </p>
+  </section>
+
+  <!-- Test -->
+  <section>
+    <h2>Test</h2>
+    <div class="bar">
+      <div class="bar-seg" style="width:22%;background:#16a34a;">13 API</div>
+      <div class="bar-seg" style="width:12%;background:#7c3aed;">5 ML</div>
+      <div class="bar-seg" style="width:18%;background:#2563eb;">9 BO</div>
+      <div class="bar-seg" style="width:23%;background:#d97706;">14 Engine</div>
+      <div class="bar-seg" style="width:25%;background:#e11d48;">15 DB</div>
+    </div>
+    <table>
+      <tr><th>Modulo</th><th>Test</th><th>Copertura</th></tr>
+      <tr><td>🌐 API (test_api.py)</td><td>13</td><td>Health, CRUD ingredienti/applicazioni/blend, simulazione, predizione, ARD</td></tr>
+      <tr><td>🧠 ML (test_gpr.py)</td><td>5</td><td>Training, save/load, validazione, metriche, baking target</td></tr>
+      <tr><td>📈 BO (test_bo.py)</td><td>8</td><td>ARD, partial dependence, BO mono/multi-obiettivo</td></tr>
+      <tr><td>⚙️ Engine (test_engine.py)</td><td>14</td><td>Blend calc, fermentazione (8), baking (5)</td></tr>
+      <tr><td>🗄️ DB (test_models.py)</td><td>12</td><td>Modelli ORM, constraint, schemi Pydantic, seed</td></tr>
+    </table>
+  </section>
+
+  <!-- ML Performance -->
+  <section>
+    <h2>Modello GPR — Performance</h2>
+    <table>
+      <tr><th>Metrica</th><th>Valore</th><th>Note</th></tr>
+      <tr><td>RMSE</td><td>0.026</td><td>su 40 campioni holdout</td></tr>
+      <tr><td>MAE</td><td>0.008</td><td>errore medio assoluto</td></tr>
+      <tr><td>R²</td><td>0.999</td><td>varianza spiegata</td></tr>
+      <tr><td>Early stopping</td><td>✅</td><td>ReduceLROnPlateau + patience</td></tr>
+      <tr><td>OOD detection</td><td>✅ 56×</td><td>std OOD 56× maggiore di in-distribution</td></tr>
+    </table>
+    <p style="margin-top:.8rem;font-size:.85rem;color:#666;">
+      Training su 200 campioni sintetici (80% train / 20% validation).  
+      Early stopping ripristina i pesi migliori se la validation loss non migliora per N epoch.
+    </p>
+  </section>
+
+  <!-- Simulazione completa -->
+  <section>
+    <h2>Simulazione end-to-end — come funziona</h2>
+
+    <p style="font-size:.9rem;color:#555;margin-bottom:1rem;">
+      Il simulatore funziona in <strong>3 fasi</strong>, proprio come farebbe un
+      panificatore, ma in pochi millisecondi:
+    </p>
+
+    <!-- Fase 1 -->
+    <div style="background:#f0f7ff;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;">
+        <span style="background:#2563eb;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;">1</span>
+        <strong style="font-size:1rem;">Mescola gli ingredienti</strong>
+      </div>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;">
+        Ogni ingrediente ha delle proprietà note (proteine, amido, grassi, ecc.).
+        Quando crei un blend, il sistema <strong>fa una media pesata</strong>: se
+        usi 70% farina di riso e 30% fecola, le proprietà finali sono il 70% di
+        quelle del riso più il 30% di quelle della fecola.
+      </p>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;margin-top:.3rem;">
+        Alcune proprietà sono più furbe: l'indice di viscosità assegna un punteggio
+        a ogni ingrediente (es. xantano = 10, patata = 3, riso = 1) per capire
+        quanto l'impasto sarà "consistente".
+      </p>
+    </div>
+
+    <!-- Fase 2 -->
+    <div style="background:#fffbeb;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;">
+        <span style="background:#d97706;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;">2</span>
+        <strong style="font-size:1rem;">Fermentazione — i lieviti fanno lievitare</strong>
+      </div>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;">
+        Il simulatore aggiunge <strong>lieviti virtuali</strong> all'impasto.
+        I lieviti mangiano gli zuccheri e producono CO₂ (come nella realtà).
+        Più zuccheri ci sono, più CO₂ viene prodotta. Più fa caldo, più sono
+        attivi (effetto Arrhenius — la stessa formula usata in chimica per
+        l'effetto della temperatura sulle reazioni).
+      </p>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;margin-top:.3rem;">
+        La CO₂ <strong>rimane intrappolata</strong> nell'impasto in base alla
+        viscosità: un impasto più denso trattiene meglio il gas. La CO₂ intrappolata
+        fa <strong>gonfiare il volume</strong>. Ecco perché il +62% di volume che
+        abbiamo visto — la viscosità media della miscela trattiene bene il gas.
+      </p>
+    </div>
+
+    <!-- Fase 3 -->
+    <div style="background:#fef2f2;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;">
+        <span style="background:#e11d48;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;">3</span>
+        <strong style="font-size:1rem;">Cottura — il calore cuoce il pane</strong>
+      </div>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;">
+        Il forno scalda l'impasto. Il calore si propaga <strong>dall'esterno verso
+        l'interno</strong> (come quando cuoci una bistecca: la superficie è cotta
+        prima del cuore). Il simulatore usa le equazioni della <strong>diffusione
+        del calore</strong> (le stesse usate negli scambiatori di calore industriali)
+        per calcolare la temperatura in ogni punto dell'impasto, minuto per minuto.
+      </p>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;margin-top:.3rem;">
+        Due fenomeni importanti:<br>
+        • <strong>Gelatinizzazione</strong> — quando l'amido raggiunge ~65°C, assorbe
+        acqua e si gonfia, dando struttura alla mollica. Se il cuore non arriva a
+        quella temperatura, la mollica resta gommosa e poco strutturata.<br>
+        • <strong>Reazione di Maillard</strong> — sopra i ~120°C in superficie,
+        zuccheri e proteine reagiscono creando la crosta dorata e il profumo di
+        pane cotto.
+      </p>
+    </div>
+
+    <!-- Risultato pratico -->
+    <div style="background:#f0fdf4;border-radius:10px;padding:1rem;">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;">
+        <span style="background:#16a34a;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;">✓</span>
+        <strong style="font-size:1rem;">Cosa significa in pratica?</strong>
+      </div>
+      <p style="font-size:.85rem;color:#444;margin-left:2.5rem;">
+        Con Glutenix puoi provare <strong>centinaia di ricette in pochi secondi</strong>
+        senza impastare nulla. Vuoi sapere cosa succede se sostituisci il 10% di
+        farina di riso con farina di mandorle? Lo simuli in un click. Il core arriva
+        a temperatura? La crosta diventa dorata? Quanto lievita? Tutte risposte che
+        altrimenti richiederebbero ore di esperimenti in cucina o in laboratorio.
+      </p>
+    </div>
+
+    <h2 style="margin-top:1.5rem;">Simulazione esempio — Riso 70% + Patata 25% + Xanthan 5%</h2>
+
+    <p style="font-size:.9rem;color:#555;margin-bottom:1rem;">
+      Ecco cosa produce il simulatore con questa miscela:
+    </p>
+
+    <div style="display:grid;grid-template-columns: 1fr 1fr;gap:1.5rem;">
+      <div>
+        <h3 style="font-size:1rem;margin-bottom:.5rem;color:#1e40af;">📊 Proprietà del blend</h3>
+        <table>
+          <tr><td>Proteine</td><td><strong>4.30%</strong></td><td style="font-size:.8rem;color:#888;">poche — tipico delle farine di riso</td></tr>
+          <tr><td>Amido</td><td><strong>77.82%</strong></td><td style="font-size:.8rem;color:#888;">tanto — è la parte che dà struttura</td></tr>
+          <tr><td>Grassi</td><td><strong>1.03%</strong></td><td style="font-size:.8rem;color:#888;">praticamente zero</td></tr>
+          <tr><td>Fibre</td><td><strong>5.46%</strong></td><td style="font-size:.8rem;color:#888;">poche — si può migliorare</td></tr>
+          <tr><td>Assorbimento acqua</td><td><strong>1.76</strong></td><td style="font-size:.8rem;color:#888;">1.76g di acqua per 1g di farina</td></tr>
+          <tr><td>Indice di viscosità</td><td><strong>1.95</strong></td><td style="font-size:.8rem;color:#888;">media consistenza</td></tr>
+          <tr><td>Idrocolloidi</td><td><strong>0.05%</strong></td><td style="font-size:.8rem;color:#888;">solo lo xantano (stabilizzante)</td></tr>
+          <tr><td>Gelatinizzazione</td><td><strong>64.6°C</strong></td><td style="font-size:.8rem;color:#888;">temperatura a cui l'amido si attiva</td></tr>
+          <tr><td>Amilosio</td><td><strong>19.56%</strong></td><td style="font-size:.8rem;color:#888;">influenza la sofficità</td></tr>
+        </table>
+      </div>
+
+      <div>
+        <h3 style="font-size:1rem;margin-bottom:.5rem;color:#92400e;">🔥 Fermentazione (30°C, 120 min)</h3>
+        <table>
+          <tr><td>Volume iniziale</td><td><strong>1.00 mL</strong></td><td style="font-size:.8rem;color:#888;"></td></tr>
+          <tr><td>Volume finale</td><td><strong>1.62 mL</strong></td><td style="font-size:.8rem;color:#888;">+62% — buona lievitazione</td></tr>
+          <tr><td>Zucchero residuo</td><td><strong>0.34 g</strong></td><td style="font-size:.8rem;color:#888;">quasi tutto consumato dai lieviti</td></tr>
+          <tr><td>CO₂ intrappolata</td><td><strong>2.07 g</strong></td><td style="font-size:.8rem;color:#888;">89% del totale — ben trattenuta</td></tr>
+        </table>
+        <p style="font-size:.8rem;color:#666;margin-top:.5rem;">
+          <strong>🔍 Cosa significa:</strong> i lieviti hanno mangiato quasi tutto
+          lo zucchero. La viscosità media trattiene bene la CO₂ (89%). Il +62% di
+          volume è un buon risultato per una farina senza glutine.
+        </p>
+
+        <h3 style="font-size:1rem;margin:.8rem 0 .5rem;color:#e11d48;">🍞 Cottura (200°C, 25 min)</h3>
+        <table>
+          <tr><td>Temp. cuore</td><td><strong>62.6°C</strong></td><td style="font-size:.8rem;color:#888;"><span style="color:#d97706;">sotto la soglia di gelatinizzazione (64.6°C)</span></td></tr>
+          <tr><td>Temp. crosta</td><td><strong>160.9°C</strong></td><td style="font-size:.8rem;color:#888;">superficie ben cotta</td></tr>
+          <tr><td>Gelatinizzazione core</td><td><strong>0%</strong></td><td style="font-size:.8rem;color:#888;">l'amido al cuore non si è attivato</td></tr>
+          <tr><td>Indice Maillard</td><td><strong>0.135</strong></td><td style="font-size:.8rem;color:#888;">leggera crostatura</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <p style="font-size:.85rem;color:#444;margin-top:1rem;background:#fef3c7;padding:.8rem;border-radius:8px;">
+      ⚠️ <strong>Problema:</strong> Il cuore (62.6°C) non raggiunge la temperatura
+      di gelatinizzazione (64.6°C). L'amido al centro non si attiva, quindi la
+      mollica sarà meno strutturata — un classico difetto dei pani senza glutine.
+      <strong>Soluzione:</strong> cuocere 5 minuti in più o alzare il forno a
+      210°C. Con Glutenix provi in 2 secondi, senza sprecare farina.
+    </p>
+  </section>
+
+  <!-- API Endpoints -->
+  <section>
+    <h2>API Endpoints</h2>
+    <table>
+      <tr><th>Metodo</th><th>Endpoint</th><th>Descrizione</th></tr>
+      <tr><td>GET</td><td>/health</td><td>Health check</td></tr>
+      <tr><td>GET · POST</td><td>/ingredients</td><td>Lista · Crea ingrediente</td></tr>
+      <tr><td>GET</td><td>/ingredients/{id}</td><td>Dettaglio ingrediente</td></tr>
+      <tr><td>GET · POST</td><td>/applications</td><td>Lista · Crea applicazione</td></tr>
+      <tr><td>GET</td><td>/applications/{id}</td><td>Dettaglio applicazione</td></tr>
+      <tr><td>GET · POST</td><td>/blends</td><td>Lista · Crea blend</td></tr>
+      <tr><td>GET</td><td>/blends/{id}</td><td>Dettaglio blend</td></tr>
+      <tr><td>POST</td><td>/simulate</td><td>Simula fermentazione + baking</td></tr>
+      <tr><td>POST</td><td>/predict</td><td>Predici volume con GPR</td></tr>
+      <tr><td>GET</td><td>/optimize/ard</td><td>Feature importance ARD</td></tr>
+    </table>
+  </section>
+
+  <!-- Come eseguire -->
+  <section>
+    <h2>Avvio rapido</h2>
+    <pre style="background:#1a1a2e;color:#e5e7eb;padding:1rem;border-radius:8px;font-size:.85rem;overflow-x:auto;">
+# API server
+uv run uvicorn glutenix.api.server:app --reload
+
+# Test
+uv run pytest -v
+
+# Addestramento GPR
+uv run python -c "from glutenix.ml.train import train_model; gpr = train_model(n_samples=500, n_iter=200); gpr.save('models/gpr.pt')"</pre>
+  </section>
+
+  <footer>Glutenix — <a href="https://github.com/LoryBug/Glutenix" style="color:#2563eb;">github.com/LoryBug/Glutenix</a></footer>
+</div>
+</body>
+</html>

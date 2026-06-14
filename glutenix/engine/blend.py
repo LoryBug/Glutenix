@@ -19,6 +19,11 @@ class BlendProperties:
     gelatinization_temp_max: float = 75.0
     amylose_pct: float = 20.0
 
+    kcal_per_100g: float = 0.0
+    sugars_pct: float = 0.0
+    saturated_fat_pct: float = 0.0
+    sodium_mg_per_100g: float = 0.0
+
     viscosity_index: float = 1.0
 
     hydrocolloid_pct: float = 0.0
@@ -34,6 +39,10 @@ class BlendCalculator:
         "fiber_pct",
         "moisture_pct",
         "ash_pct",
+        "kcal_per_100g",
+        "sugars_pct",
+        "saturated_fat_pct",
+        "sodium_mg_per_100g",
     ]
 
     def calculate(

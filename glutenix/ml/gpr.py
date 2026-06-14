@@ -1,11 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import gpytorch
+import structlog
 import torch
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.kernels import RBFKernel, ScaleKernel
 from gpytorch.means import ConstantMean
 from gpytorch.models import ExactGP
+
+logger = structlog.get_logger("glutenix.ml.gpr")
 
 
 class PhysicsKernel(gpytorch.kernels.Kernel):
@@ -41,6 +44,20 @@ class Prediction:
     conf_interval_95: tuple[float, float]
 
 
+@dataclass
+class EvalMetrics:
+    rmse: float
+    mae: float
+    r2: float
+
+
+@dataclass
+class TrainHistoryEntry:
+    iteration: int
+    train_loss: float
+    val_loss: float | None = None
+
+
 class PhysicsGPR:
     FEATURE_NAMES = [
         "protein_pct",
@@ -57,6 +74,8 @@ class PhysicsGPR:
     def __init__(self):
         self.model: PhysicsGPModel | None = None
         self.likelihood: gpytorch.likelihoods.GaussianLikelihood | None = None
+        self.train_history: list[TrainHistoryEntry] = field(default_factory=list)
+        self._best_val_loss: float = float("inf")
 
     @property
     def is_trained(self) -> bool:
@@ -73,12 +92,25 @@ class PhysicsGPR:
         train_y: torch.Tensor,
         n_iter: int = 200,
         lr: float = 0.1,
+        val_split: float = 0.0,
+        patience: int = 20,
         verbose: bool = True,
     ):
-        x_norm, x_mean, x_std = self._normalize(train_x)
-        y_mean = train_y.mean()
-        y_std = train_y.std(unbiased=False).clamp(min=1e-8)
-        y_norm = (train_y - y_mean) / y_std
+        n = len(train_y)
+        if val_split > 0 and n > 10:
+            n_val = max(1, int(n * val_split))
+            perm = torch.randperm(n)
+            val_idx, tr_idx = perm[:n_val], perm[n_val:]
+            x_tr, y_tr = train_x[tr_idx], train_y[tr_idx]
+            x_val, y_val = train_x[val_idx], train_y[val_idx]
+        else:
+            x_tr, y_tr = train_x, train_y
+            x_val = y_val = None
+
+        x_norm, x_mean, x_std = self._normalize(x_tr)
+        y_mean = y_tr.mean()
+        y_std = y_tr.std(unbiased=False).clamp(min=1e-8)
+        y_norm = (y_tr - y_mean) / y_std
 
         self._x_mean = x_mean
         self._x_std = x_std
@@ -91,14 +123,20 @@ class PhysicsGPR:
         self.model.train()
         self.likelihood.train()
 
-        optimizer = torch.optim.Adam(
-            self.model.parameters(),
-            lr=lr,
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.5, patience=patience // 2, min_lr=1e-5
         )
 
-        mll = gpytorch.mlls.ExactMarginalLogLikelihood(
-            self.likelihood, self.model
-        )
+        mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
+        self.train_history = []
+        self._best_val_loss = float("inf")
+        best_state = None
+        stall = 0
+
+        if x_val is not None:
+            x_val_norm = (x_val - x_mean) / x_std
+            y_val_norm = (y_val - y_mean) / y_std
 
         for i in range(n_iter):
             optimizer.zero_grad()
@@ -107,8 +145,54 @@ class PhysicsGPR:
             loss.backward()
             optimizer.step()
 
+            if x_val is not None:
+                self.model.eval()
+                with torch.no_grad():
+                    val_out = self.model(x_val_norm)
+                    vloss = -mll(val_out, y_val_norm)
+                self.model.train()
+                val_loss = float(vloss.item())
+                scheduler.step(val_loss)
+
+                if val_loss < self._best_val_loss:
+                    self._best_val_loss = val_loss
+                    best_state = {
+                        "model": self.model.state_dict(),
+                        "likelihood": self.likelihood.state_dict(),
+                    }
+                    stall = 0
+                else:
+                    stall += 1
+
+                if patience > 0 and stall >= patience:
+                    logger.warning(
+                        "early_stopping",
+                        iteration=i + 1,
+                        patience=patience,
+                        best_val_loss=round(self._best_val_loss, 4),
+                    )
+                    if best_state is not None:
+                        self.model.load_state_dict(best_state["model"])
+                        self.likelihood.load_state_dict(best_state["likelihood"])
+                    break
+            else:
+                val_loss = None
+
+            self.train_history.append(TrainHistoryEntry(
+                iteration=i + 1,
+                train_loss=float(loss.item()),
+                val_loss=val_loss,
+            ))
+
             if verbose and (i + 1) % 50 == 0:
-                print(f"Iter {i+1:3d}/{n_iter} | Loss: {loss.item():.4f}")
+                log_data = dict(
+                    iteration=i + 1,
+                    n_iter=n_iter,
+                    train_loss=round(loss.item(), 4),
+                )
+                if val_loss is not None:
+                    log_data["val_loss"] = round(val_loss, 4)
+                logger.info("training_iter", **log_data)
 
     def predict(self, features: list[float] | torch.Tensor) -> Prediction:
         if not self.is_trained:
@@ -159,6 +243,17 @@ class PhysicsGPR:
 
         return mean, std
 
+    def evaluate(self, eval_x: torch.Tensor, eval_y: torch.Tensor) -> EvalMetrics:
+        if not self.is_trained:
+            raise RuntimeError("Model not trained.")
+        mean, _ = self.predict_batch(eval_x)
+        rmse = float(torch.sqrt(((mean - eval_y) ** 2).mean()))
+        mae = float(torch.abs(mean - eval_y).mean())
+        ss_res = ((mean - eval_y) ** 2).sum()
+        ss_tot = ((eval_y - eval_y.mean()) ** 2).sum()
+        r2 = float(1 - ss_res / ss_tot.clamp(min=1e-12))
+        return EvalMetrics(rmse=rmse, mae=mae, r2=r2)
+
     def save(self, path: str):
         if not self.is_trained:
             raise RuntimeError("Model not trained. Nothing to save.")
@@ -172,6 +267,8 @@ class PhysicsGPR:
                 "x_std": self._x_std,
                 "y_mean": self._y_mean,
                 "y_std": self._y_std,
+                "train_history": [{"iteration": h.iteration, "train_loss": h.train_loss, "val_loss": h.val_loss} for h in self.train_history],
+                "best_val_loss": self._best_val_loss,
             },
             path,
         )
@@ -203,6 +300,11 @@ class PhysicsGPR:
         gpr.model = PhysicsGPModel(checkpoint["train_x"], checkpoint["train_y"], gpr.likelihood)
         gpr.model.load_state_dict(checkpoint["model_state_dict"])
         gpr.likelihood.load_state_dict(checkpoint["likelihood_state_dict"])
+        gpr.train_history = [
+            TrainHistoryEntry(**h) if isinstance(h, dict) else h
+            for h in checkpoint.get("train_history", [])
+        ]
+        gpr._best_val_loss = float(checkpoint.get("best_val_loss", float("inf")))
         gpr.model.eval()
         gpr.likelihood.eval()
         return gpr

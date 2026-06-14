@@ -24,6 +24,11 @@ class IngredientCreate(BaseModel):
     gelatinization_temp_max: Optional[float] = Field(None, ge=0)
     amylose_pct: Optional[float] = Field(None, ge=0, le=100)
 
+    kcal_per_100g: Optional[float] = Field(None, ge=0)
+    sugars_pct: Optional[float] = Field(None, ge=0, le=100)
+    saturated_fat_pct: Optional[float] = Field(None, ge=0, le=100)
+    sodium_mg_per_100g: Optional[float] = Field(None, ge=0)
+
     extra_properties: Optional[str] = None
 
 

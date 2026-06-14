@@ -22,5 +22,6 @@ Thumbs.db
 # Project
 *.db
 *.db-*
+*.db.bak-*
 *.sqlite3
 *.sqlite3-*

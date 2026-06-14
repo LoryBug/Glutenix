@@ -4,8 +4,12 @@ Data sourced from USDA FoodData Central and peer-reviewed literature.
 Values are approximate (averages across varieties/references).
 """
 
+import structlog
+
 from glutenix.db.base import SessionLocal
 from glutenix.db.models import Application, Ingredient
+
+logger = structlog.get_logger("glutenix.db.seed")
 
 
 def seed_database(session=None):
@@ -19,7 +23,7 @@ def seed_database(session=None):
         _seed_ingredients(session)
         _seed_applications(session)
         session.commit()
-        print("Database seeded successfully.")
+        logger.info("db_seeded")
     except Exception:
         session.rollback()
         raise
@@ -30,7 +34,7 @@ def seed_database(session=None):
 
 def _seed_ingredients(session):
     if session.query(Ingredient).count() > 0:
-        print("Ingredients already seeded, skipping.")
+        logger.warning("ingredients_already_seeded")
         return
 
     ingredients = [
@@ -44,6 +48,7 @@ def _seed_ingredients(session):
             water_absorption=1.2,
             gelatinization_temp_min=68, gelatinization_temp_max=78,
             amylose_pct=19.0,
+            kcal_per_100g=366.0, sugars_pct=0.1, saturated_fat_pct=0.4, sodium_mg_per_100g=0.0,
         ),
         Ingredient(
             name="Brown rice flour",
@@ -55,6 +60,7 @@ def _seed_ingredients(session):
             water_absorption=1.4,
             gelatinization_temp_min=68, gelatinization_temp_max=78,
             amylose_pct=19.0,
+            kcal_per_100g=363.0, sugars_pct=0.7, saturated_fat_pct=0.6, sodium_mg_per_100g=8.0,
         ),
         Ingredient(
             name="Buckwheat flour",
@@ -66,6 +72,7 @@ def _seed_ingredients(session):
             water_absorption=1.6,
             gelatinization_temp_min=62, gelatinization_temp_max=72,
             amylose_pct=25.0,
+            kcal_per_100g=335.0, sugars_pct=2.6, saturated_fat_pct=0.6, sodium_mg_per_100g=11.0,
         ),
         Ingredient(
             name="Sorghum flour",
@@ -77,6 +84,7 @@ def _seed_ingredients(session):
             water_absorption=1.3,
             gelatinization_temp_min=69, gelatinization_temp_max=80,
             amylose_pct=23.0,
+            kcal_per_100g=359.0, sugars_pct=1.9, saturated_fat_pct=0.5, sodium_mg_per_100g=3.0,
         ),
         Ingredient(
             name="Teff flour",
@@ -88,6 +96,7 @@ def _seed_ingredients(session):
             water_absorption=1.5,
             gelatinization_temp_min=68, gelatinization_temp_max=82,
             amylose_pct=18.0,
+            kcal_per_100g=367.0, sugars_pct=1.5, saturated_fat_pct=0.4, sodium_mg_per_100g=12.0,
         ),
         Ingredient(
             name="Almond flour",
@@ -97,6 +106,7 @@ def _seed_ingredients(session):
             protein_pct=21.2, starch_pct=20.0, fat_pct=49.5,
             fiber_pct=12.5, moisture_pct=5.0, ash_pct=2.8,
             water_absorption=1.0,
+            kcal_per_100g=579.0, sugars_pct=4.4, saturated_fat_pct=3.8, sodium_mg_per_100g=1.0,
         ),
         Ingredient(
             name="Millet flour",
@@ -108,6 +118,7 @@ def _seed_ingredients(session):
             water_absorption=1.5,
             gelatinization_temp_min=67, gelatinization_temp_max=78,
             amylose_pct=21.0,
+            kcal_per_100g=365.0, sugars_pct=0.2, saturated_fat_pct=0.6, sodium_mg_per_100g=4.0,
         ),
         Ingredient(
             name="Oat flour (GF)",
@@ -119,6 +130,7 @@ def _seed_ingredients(session):
             water_absorption=1.8,
             gelatinization_temp_min=58, gelatinization_temp_max=65,
             amylose_pct=27.0,
+            kcal_per_100g=404.0, sugars_pct=0.8, saturated_fat_pct=1.2, sodium_mg_per_100g=8.0,
         ),
         Ingredient(
             name="Quinoa flour",
@@ -130,6 +142,7 @@ def _seed_ingredients(session):
             water_absorption=1.7,
             gelatinization_temp_min=55, gelatinization_temp_max=70,
             amylose_pct=11.0,
+            kcal_per_100g=357.0, sugars_pct=1.7, saturated_fat_pct=0.7, sodium_mg_per_100g=7.0,
         ),
         Ingredient(
             name="Tapioca starch",
@@ -141,6 +154,7 @@ def _seed_ingredients(session):
             water_absorption=0.8,
             gelatinization_temp_min=58, gelatinization_temp_max=70,
             amylose_pct=17.0,
+            kcal_per_100g=358.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=1.0,
         ),
         Ingredient(
             name="Potato starch",
@@ -152,6 +166,7 @@ def _seed_ingredients(session):
             water_absorption=0.7,
             gelatinization_temp_min=56, gelatinization_temp_max=67,
             amylose_pct=21.0,
+            kcal_per_100g=357.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=18.0,
         ),
         Ingredient(
             name="Corn starch",
@@ -163,6 +178,7 @@ def _seed_ingredients(session):
             water_absorption=0.6,
             gelatinization_temp_min=62, gelatinization_temp_max=72,
             amylose_pct=27.0,
+            kcal_per_100g=357.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=9.0,
         ),
         Ingredient(
             name="Sweet rice flour (Mochiko)",
@@ -174,6 +190,7 @@ def _seed_ingredients(session):
             water_absorption=1.1,
             gelatinization_temp_min=63, gelatinization_temp_max=72,
             amylose_pct=1.0,
+            kcal_per_100g=364.0, sugars_pct=0.1, saturated_fat_pct=0.4, sodium_mg_per_100g=0.0,
         ),
         Ingredient(
             name="Xanthan gum",
@@ -183,6 +200,7 @@ def _seed_ingredients(session):
             protein_pct=3.0, starch_pct=0.0, fat_pct=0.5,
             fiber_pct=75.0, moisture_pct=10.0, ash_pct=8.0,
             water_absorption=15.0,
+            kcal_per_100g=240.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=80.0,
         ),
         Ingredient(
             name="Psyllium husk",
@@ -192,6 +210,7 @@ def _seed_ingredients(session):
             protein_pct=3.0, starch_pct=0.0, fat_pct=0.5,
             fiber_pct=85.0, moisture_pct=8.0, ash_pct=3.0,
             water_absorption=25.0,
+            kcal_per_100g=200.0, sugars_pct=0.3, saturated_fat_pct=0.0, sodium_mg_per_100g=10.0,
         ),
         Ingredient(
             name="Guar gum",
@@ -201,6 +220,7 @@ def _seed_ingredients(session):
             protein_pct=5.0, starch_pct=0.0, fat_pct=0.5,
             fiber_pct=80.0, moisture_pct=10.0, ash_pct=1.0,
             water_absorption=20.0,
+            kcal_per_100g=260.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=2.0,
         ),
         Ingredient(
             name="HPMC (Hydroxypropyl Methylcellulose)",
@@ -209,6 +229,7 @@ def _seed_ingredients(session):
             protein_pct=0.0, starch_pct=0.0, fat_pct=0.0,
             fiber_pct=90.0, moisture_pct=5.0, ash_pct=3.0,
             water_absorption=12.0,
+            kcal_per_100g=200.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=50.0,
         ),
     ]
     session.add_all(ingredients)
@@ -216,7 +237,7 @@ def _seed_ingredients(session):
 
 def _seed_applications(session):
     if session.query(Application).count() > 0:
-        print("Applications already seeded, skipping.")
+        logger.warning("applications_already_seeded")
         return
 
     applications = [

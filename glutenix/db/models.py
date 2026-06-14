@@ -49,6 +49,22 @@ class Ingredient(Base):
             "amylose_pct is null or (amylose_pct >= 0 and amylose_pct <= 100)",
             name="ck_ingredient_amylose_pct",
         ),
+        CheckConstraint(
+            "sugars_pct is null or (sugars_pct >= 0 and sugars_pct <= 100)",
+            name="ck_ingredient_sugars_pct",
+        ),
+        CheckConstraint(
+            "saturated_fat_pct is null or (saturated_fat_pct >= 0 and saturated_fat_pct <= 100)",
+            name="ck_ingredient_saturated_fat_pct",
+        ),
+        CheckConstraint(
+            "sodium_mg_per_100g is null or sodium_mg_per_100g >= 0",
+            name="ck_ingredient_sodium",
+        ),
+        CheckConstraint(
+            "kcal_per_100g is null or kcal_per_100g >= 0",
+            name="ck_ingredient_kcal",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -72,6 +88,11 @@ class Ingredient(Base):
     gelatinization_temp_min: Mapped[Optional[float]] = mapped_column(Float)
     gelatinization_temp_max: Mapped[Optional[float]] = mapped_column(Float)
     amylose_pct: Mapped[Optional[float]] = mapped_column(Float)
+
+    kcal_per_100g: Mapped[Optional[float]] = mapped_column(Float, comment="Energy kcal per 100g")
+    sugars_pct: Mapped[Optional[float]] = mapped_column(Float, comment="of which sugars")
+    saturated_fat_pct: Mapped[Optional[float]] = mapped_column(Float, comment="of which saturated fat")
+    sodium_mg_per_100g: Mapped[Optional[float]] = mapped_column(Float, comment="Sodium in mg per 100g")
 
     extra_properties: Mapped[Optional[str]] = mapped_column(
         Text, comment="JSON for uncommon properties"

@@ -1,25 +1,26 @@
+import structlog
 import torch
 
 from glutenix.db.models import Ingredient
+from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
-from glutenix.engine.fermentation import (
-    FermentationParams,
-    FermentationSimulator,
-)
+from glutenix.engine.fermentation import FermentationParams, FermentationSimulator
 from glutenix.ml.gpr import PhysicsGPR
+
+logger = structlog.get_logger("glutenix.ml.train")
 
 
 def generate_synthetic_data(
     ingredients: list[Ingredient],
     n_samples: int = 500,
     seed: int = 42,
+    target: str = "fermentation",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     torch.manual_seed(seed)
 
     calc = BlendCalculator()
-    ferm = FermentationSimulator(
-        FermentationParams(temp_c=28.0)
-    )
+    ferm = FermentationSimulator(FermentationParams(temp_c=28.0))
+    baker = BakingSimulator(BakingParams())
 
     n_feats = len(PhysicsGPR.FEATURE_NAMES)
     features = []
@@ -35,9 +36,13 @@ def generate_synthetic_data(
 
         props = calc.calculate(ingredient_data)
 
-        result = ferm.simulate(
+        ferm_result = ferm.simulate(
             viscosity_index=props.viscosity_index,
             duration_min=120.0,
+        )
+
+        bake_result = baker.simulate(
+            gelatinization_temp_min=props.gelatinization_temp_min,
         )
 
         feat_vec = torch.tensor(
@@ -55,8 +60,13 @@ def generate_synthetic_data(
             dtype=torch.float,
         )
 
+        if target == "baking":
+            y = bake_result.core_temp_c
+        else:
+            y = ferm_result.final_volume_increase * 100
+
         features.append(feat_vec)
-        targets.append(result.final_volume_increase * 100)
+        targets.append(y)
 
     return torch.stack(features), torch.tensor(targets, dtype=torch.float)
 
@@ -78,10 +88,10 @@ def train_model(
         ingredients = session.query(Ingredient).all()
         session.close()
 
-    print(f"Generating {n_samples} synthetic blends...")
+    logger.info("generating_synthetic_data", n_samples=n_samples, target=target)
     train_x, train_y = generate_synthetic_data(ingredients, n_samples)
 
-    print(f"Training GPR on {n_samples} samples ({n_iter} iterations)...")
+    logger.info("training_gpr", n_samples=n_samples, n_iter=n_iter)
     gpr = PhysicsGPR()
     gpr.train(train_x, train_y, n_iter=n_iter, verbose=True)
 

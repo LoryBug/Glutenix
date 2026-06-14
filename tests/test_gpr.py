@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from glutenix.db.models import Ingredient
-from glutenix.db.seed import _seed_ingredients, _seed_applications
+from glutenix.db.seed import _seed_applications, _seed_ingredients
 from glutenix.ml.gpr import PhysicsGPR
 from glutenix.ml.train import generate_synthetic_data
 
@@ -61,6 +61,46 @@ def test_gpr_save_load_roundtrip(seeded_session, tmp_path):
 
     torch.testing.assert_close(after_mean, before_mean)
     torch.testing.assert_close(after_std, before_std)
+
+
+def test_gpr_validation(seeded_session):
+    ingredients = seeded_session.query(Ingredient).all()
+    train_x, train_y = generate_synthetic_data(ingredients, n_samples=80)
+
+    gpr = PhysicsGPR()
+    gpr.train(train_x, train_y, n_iter=100, val_split=0.2, patience=10, verbose=False)
+
+    assert gpr.is_trained
+    assert len(gpr.train_history) > 0
+    assert all(h.train_loss is not None and not (h.train_loss != h.train_loss) for h in gpr.train_history)  # no NaN
+    assert any(h.val_loss is not None for h in gpr.train_history)
+    assert all(h.iteration > 0 for h in gpr.train_history)
+
+
+def test_gpr_evaluate(seeded_session):
+    ingredients = seeded_session.query(Ingredient).all()
+    train_x, train_y = generate_synthetic_data(ingredients, n_samples=100)
+
+    gpr = PhysicsGPR()
+    gpr.train(train_x[:80], train_y[:80], n_iter=30, verbose=False)
+
+    metrics = gpr.evaluate(train_x[80:], train_y[80:])
+    assert metrics.rmse >= 0
+    assert metrics.mae >= 0
+    assert metrics.r2 <= 1.0
+
+
+def test_synthetic_baking_target(seeded_session):
+    ingredients = seeded_session.query(Ingredient).all()
+
+    train_x, train_y = generate_synthetic_data(ingredients, n_samples=30, target="baking")
+    assert train_x.shape == (30, 9)
+    assert train_y.shape == (30,)
+    assert all(y > 0 for y in train_y.tolist())
+
+    gpr = PhysicsGPR()
+    gpr.train(train_x, train_y, n_iter=20, verbose=False)
+    assert gpr.is_trained
 
 
 if __name__ == "__main__":
