@@ -11,6 +11,7 @@ dependencies = [
     "scipy>=1.15",
     "gpytorch>=1.13",
     "torch>=2.0",
+    "botorch>=0.18.1",
 ]
 
 [dependency-groups]
