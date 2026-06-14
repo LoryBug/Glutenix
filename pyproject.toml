@@ -1,0 +1,21 @@
+[project]
+name = "glutenix"
+version = "0.1.0"
+description = "Simulatore e ottimizzatore di mix di farine senza glutine"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "sqlalchemy>=2.0",
+    "pydantic>=2.0",
+    "numpy>=2.0",
+    "scipy>=1.15",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
