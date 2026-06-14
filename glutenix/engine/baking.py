@@ -12,9 +12,7 @@ class BakingParams:
 
     thermal_diffusivity: float = 1.5e-7
     specific_heat: float = 2800.0
-    latent_heat: float = 2.26e6
     density: float = 400.0
-
     surface_heat_transfer: float = 25.0
 
     n_spatial: int = 50
@@ -48,29 +46,30 @@ class BakingSimulator:
         T_gel_min = gelatinization_temp_min + 273.15
         T_gel_max = gelatinization_temp_max + 273.15
 
-        dx = p.dough_thickness_cm / (p.n_spatial - 1)
+        dx_m = p.dough_thickness_cm / (p.n_spatial - 1) / 100.0
 
         alpha = p.thermal_diffusivity
-        dt_max = 0.4 * dx**2 / alpha
-        dt_suggested = p.baking_time_min * 60.0 / p.n_time
+        total_s = p.baking_time_min * 60.0
+        dt_max = 0.4 * dx_m**2 / alpha
+        dt_suggested = total_s / p.n_time
 
         if dt_suggested > dt_max:
-            n_time = int(np.ceil(p.baking_time_min * 60.0 / dt_max))
+            n_steps = int(np.ceil(total_s / dt_max))
         else:
-            n_time = p.n_time
+            n_steps = p.n_time
 
-        dt = p.baking_time_min * 60.0 / n_time
+        dt = total_s / n_steps
 
-        x = np.linspace(0, p.dough_thickness_cm, p.n_spatial)
-        t = np.linspace(0, p.baking_time_min * 60.0, n_time)
+        x_cm = np.linspace(0, p.dough_thickness_cm, p.n_spatial)
+        t = np.linspace(0, total_s, n_steps + 1)
 
-        T = np.full((n_time, p.n_spatial), T0)
+        T = np.full((n_steps + 1, p.n_spatial), T0)
 
-        r = alpha * dt / dx**2
+        r = alpha * dt / dx_m**2
         h = p.surface_heat_transfer
         rho_cp = p.density * p.specific_heat
 
-        for n in range(n_time - 1):
+        for n in range(n_steps):
             T_curr = T[n]
             T_next = T_curr.copy()
 
@@ -79,20 +78,20 @@ class BakingSimulator:
             )
 
             T_next[0] += r * 2 * (T_curr[1] - T_curr[0])
-            T_next[0] += dt * h * (T_oven - T_curr[0]) / rho_cp / dx
+            T_next[0] += dt * 2 * h * (T_oven - T_curr[0]) / rho_cp / dx_m
 
             T_next[-1] += r * 2 * (T_curr[-2] - T_curr[-1])
 
             T[n + 1] = T_next
 
-        G = np.clip(
-            (T - T_gel_min) / (T_gel_max - T_gel_min),
-            0,
-            1,
-        )
+        gel_range = T_gel_max - T_gel_min
+        if gel_range > 0:
+            G = np.clip((T - T_gel_min) / gel_range, 0, 1)
+        else:
+            G = np.where(T >= T_gel_min, 1.0, 0.0)
 
-        M = np.zeros(n_time)
-        for n in range(1, n_time):
+        M = np.zeros(n_steps + 1)
+        for n in range(1, n_steps + 1):
             T_surface = T[n, 0]
             if T_surface > 373.15:
                 T_c = T_surface - 273.15
@@ -101,7 +100,7 @@ class BakingSimulator:
 
         return BakingResult(
             time_min=t / 60.0,
-            position_cm=x,
+            position_cm=x_cm,
             temperature=T - 273.15,
             gelatinization=G,
             maillard_index=M_norm,
