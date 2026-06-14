@@ -1,19 +1,29 @@
+import pytest
 import torch
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from glutenix.db.base import Base, engine, SessionLocal
+from glutenix.db.base import Base
 from glutenix.db.models import Ingredient
-from glutenix.db.seed import seed_database
+from glutenix.db.seed import _seed_ingredients, _seed_applications
 from glutenix.ml.gpr import PhysicsGPR
 from glutenix.ml.train import generate_synthetic_data
 
 
-def test_gpr_training():
+@pytest.fixture
+def db_session():
+    engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
-    seed_database()
-
-    session = SessionLocal()
-    ingredients = session.query(Ingredient).all()
+    session = sessionmaker(engine)()
+    _seed_ingredients(session)
+    _seed_applications(session)
+    session.commit()
+    yield session
     session.close()
+
+
+def test_gpr_training(db_session):
+    ingredients = db_session.query(Ingredient).all()
 
     train_x, train_y = generate_synthetic_data(ingredients, n_samples=300)
     train_y += torch.randn(300) * 0.5
@@ -38,12 +48,34 @@ def test_gpr_training():
     ood_pred = gpr.predict(ood_x[0].tolist())
     assert ood_pred.std > pred.std * 2
 
-    print(f"GPR test passed: {len(ingredients)} ingredients, 300 samples")
-    print(f"In-distribution: {pred.mean:.2f} +/- {pred.std:.2f}")
-    print(f"Out-of-distribution: {ood_pred.mean:.2f} +/- {ood_pred.std:.2f}")
-
     assert abs(pred.mean - train_y[0].item()) < 5.0
 
 
+def test_gpr_save_load_roundtrip(db_session, tmp_path):
+    ingredients = db_session.query(Ingredient).all()
+    train_x, train_y = generate_synthetic_data(ingredients, n_samples=50)
+
+    gpr = PhysicsGPR()
+    gpr.train(train_x, train_y, n_iter=20, verbose=False)
+
+    before_mean, before_std = gpr.predict_batch(train_x[:5])
+
+    path = tmp_path / "gpr.pt"
+    gpr.save(str(path))
+    loaded = PhysicsGPR.load(str(path))
+
+    after_mean, after_std = loaded.predict_batch(train_x[:5])
+
+    torch.testing.assert_close(after_mean, before_mean)
+    torch.testing.assert_close(after_std, before_std)
+
+
 if __name__ == "__main__":
-    test_gpr_training()
+    engine = create_engine("sqlite:///:memory:", echo=False)
+    Base.metadata.create_all(engine)
+    session = sessionmaker(engine)()
+    _seed_ingredients(session)
+    _seed_applications(session)
+    session.commit()
+    test_gpr_training(session)
+    session.close()

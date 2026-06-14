@@ -64,7 +64,7 @@ class PhysicsGPR:
 
     def _normalize(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mean = x.mean(0)
-        std = x.std(0).clamp(min=1e-8)
+        std = x.std(0, unbiased=False).clamp(min=1e-8)
         return (x - mean) / std, mean, std
 
     def train(
@@ -77,7 +77,7 @@ class PhysicsGPR:
     ):
         x_norm, x_mean, x_std = self._normalize(train_x)
         y_mean = train_y.mean()
-        y_std = train_y.std().clamp(min=1e-8)
+        y_std = train_y.std(unbiased=False).clamp(min=1e-8)
         y_norm = (train_y - y_mean) / y_std
 
         self._x_mean = x_mean
@@ -158,3 +158,51 @@ class PhysicsGPR:
             std = pred.stddev * self._y_std
 
         return mean, std
+
+    def save(self, path: str):
+        if not self.is_trained:
+            raise RuntimeError("Model not trained. Nothing to save.")
+        torch.save(
+            {
+                "model_state_dict": self.model.state_dict(),
+                "likelihood_state_dict": self.likelihood.state_dict(),
+                "train_x": self.model.train_inputs[0].detach().cpu(),
+                "train_y": self.model.train_targets.detach().cpu(),
+                "x_mean": self._x_mean,
+                "x_std": self._x_std,
+                "y_mean": self._y_mean,
+                "y_std": self._y_std,
+            },
+            path,
+        )
+
+    @classmethod
+    def load(cls, path: str) -> "PhysicsGPR":
+        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+        required = {
+            "model_state_dict",
+            "likelihood_state_dict",
+            "train_x",
+            "train_y",
+            "x_mean",
+            "x_std",
+            "y_mean",
+            "y_std",
+        }
+        missing = required - checkpoint.keys()
+        if missing:
+            raise ValueError(f"Invalid checkpoint, missing keys: {missing}")
+
+        gpr = cls()
+        gpr._x_mean = checkpoint["x_mean"]
+        gpr._x_std = checkpoint["x_std"]
+        gpr._y_mean = checkpoint["y_mean"]
+        gpr._y_std = checkpoint["y_std"]
+
+        gpr.likelihood = gpytorch.likelihoods.GaussianLikelihood()
+        gpr.model = PhysicsGPModel(checkpoint["train_x"], checkpoint["train_y"], gpr.likelihood)
+        gpr.model.load_state_dict(checkpoint["model_state_dict"])
+        gpr.likelihood.load_state_dict(checkpoint["likelihood_state_dict"])
+        gpr.model.eval()
+        gpr.likelihood.eval()
+        return gpr
