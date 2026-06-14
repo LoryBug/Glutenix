@@ -115,7 +115,7 @@ class BlendCalculator:
     ) -> None:
         values = []
         for ing, pct in ingredient_data:
-            if ing.amylose_pct is not None and ing.starch_pct:
+            if ing.amylose_pct is not None and ing.starch_pct is not None:
                 values.append(ing.amylose_pct * ing.starch_pct / 100 * pct)
         if values:
             if props.starch_pct > 0:
