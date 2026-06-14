@@ -46,8 +46,24 @@ class FermentationSimulator:
     ) -> FermentationResult:
         p = self.params
 
+        if p.yield_coeff <= 0:
+            raise ValueError(
+                f"yield_coeff must be positive, got {p.yield_coeff}"
+            )
+        if p.Km <= 0:
+            raise ValueError(f"Km must be positive, got {p.Km}")
+        if p.initial_sugar < 0:
+            raise ValueError(
+                f"initial_sugar must be non-negative, got {p.initial_sugar}"
+            )
+        if p.yeast_conc < 0:
+            raise ValueError(
+                f"yeast_conc must be non-negative, got {p.yeast_conc}"
+            )
+
         def ode(t, y):
             co2, S = y
+            S = max(S, 0.0)
             arrhenius = np.exp(
                 -p.Ea / p.R * (1.0 / p.temp_k - 1.0 / p.T_ref)
             )
@@ -69,8 +85,15 @@ class FermentationSimulator:
             atol=1e-9,
         )
 
-        co2_produced = sol.y[0]
-        sugar = sol.y[1]
+        if not sol.success:
+            raise RuntimeError(
+                f"Fermentation solver failed: {sol.message}"
+            )
+
+        co2_produced = np.minimum(
+            sol.y[0], p.initial_sugar * p.yield_coeff
+        )
+        sugar = np.maximum(sol.y[1], 0.0)
 
         retention = 1.0 - 0.3 * np.exp(-viscosity_index * 0.5)
         co2_trapped = co2_produced * retention

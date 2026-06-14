@@ -110,6 +110,40 @@ class TestFermentationSimulator:
         hot = FermentationSimulator(params_hot).simulate()
         assert hot.final_volume_increase > cold.final_volume_increase
 
+    def test_sugar_non_negative(self):
+        result = FermentationSimulator().simulate(duration_min=1000.0)
+        assert np.all(result.sugar >= 0.0)
+
+    def test_rejects_invalid_yield_coeff(self):
+        import pytest
+
+        with pytest.raises(ValueError):
+            FermentationSimulator(FermentationParams(yield_coeff=0.0)).simulate()
+        with pytest.raises(ValueError):
+            FermentationSimulator(FermentationParams(yield_coeff=-1.0)).simulate()
+
+    def test_rejects_invalid_initial_sugar(self):
+        import pytest
+
+        with pytest.raises(ValueError):
+            FermentationSimulator(
+                FermentationParams(initial_sugar=-1.0)
+            ).simulate()
+
+    def test_rejects_invalid_km(self):
+        import pytest
+
+        with pytest.raises(ValueError):
+            FermentationSimulator(FermentationParams(Km=0.0)).simulate()
+
+    def test_rejects_invalid_yeast_conc(self):
+        import pytest
+
+        with pytest.raises(ValueError):
+            FermentationSimulator(
+                FermentationParams(yeast_conc=-1.0)
+            ).simulate()
+
 
 class TestBakingSimulator:
     def test_simulate_returns_result(self):
