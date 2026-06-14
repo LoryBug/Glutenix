@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.0",
     "numpy>=2.0",
     "scipy>=1.15",
+    "gpytorch>=1.13",
 ]
 
 [dependency-groups]
@@ -16,6 +17,13 @@ dev = [
     "pytest>=8",
     "pytest-cov>=6",
 ]
+
+[tool.setuptools.packages.find]
+include = ["glutenix*"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
