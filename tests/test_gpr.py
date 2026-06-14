@@ -1,9 +1,6 @@
 import pytest
 import torch
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from glutenix.db.base import Base
 from glutenix.db.models import Ingredient
 from glutenix.db.seed import _seed_ingredients, _seed_applications
 from glutenix.ml.gpr import PhysicsGPR
@@ -11,19 +8,15 @@ from glutenix.ml.train import generate_synthetic_data
 
 
 @pytest.fixture
-def db_session():
-    engine = create_engine("sqlite:///:memory:", echo=False)
-    Base.metadata.create_all(engine)
-    session = sessionmaker(engine)()
-    _seed_ingredients(session)
-    _seed_applications(session)
-    session.commit()
-    yield session
-    session.close()
+def seeded_session(db_session):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    return db_session
 
 
-def test_gpr_training(db_session):
-    ingredients = db_session.query(Ingredient).all()
+def test_gpr_training(seeded_session):
+    ingredients = seeded_session.query(Ingredient).all()
 
     train_x, train_y = generate_synthetic_data(ingredients, n_samples=300)
     train_y += torch.randn(300) * 0.5
@@ -51,8 +44,8 @@ def test_gpr_training(db_session):
     assert abs(pred.mean - train_y[0].item()) < 5.0
 
 
-def test_gpr_save_load_roundtrip(db_session, tmp_path):
-    ingredients = db_session.query(Ingredient).all()
+def test_gpr_save_load_roundtrip(seeded_session, tmp_path):
+    ingredients = seeded_session.query(Ingredient).all()
     train_x, train_y = generate_synthetic_data(ingredients, n_samples=50)
 
     gpr = PhysicsGPR()
@@ -71,11 +64,26 @@ def test_gpr_save_load_roundtrip(db_session, tmp_path):
 
 
 if __name__ == "__main__":
+    import tempfile
+    from pathlib import Path
+    from sqlalchemy import create_engine, event
+    from sqlalchemy.orm import sessionmaker
+    from glutenix.db.base import Base
+
     engine = create_engine("sqlite:///:memory:", echo=False)
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(engine)
     session = sessionmaker(engine)()
     _seed_ingredients(session)
     _seed_applications(session)
     session.commit()
     test_gpr_training(session)
+
+    test_gpr_save_load_roundtrip(session, Path(tempfile.mkdtemp()))
     session.close()
