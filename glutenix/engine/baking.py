@@ -41,6 +41,29 @@ class BakingSimulator:
     ) -> BakingResult:
         p = self.params
 
+        if p.n_spatial < 2:
+            raise ValueError(f"n_spatial must be >= 2, got {p.n_spatial}")
+        if p.dough_thickness_cm <= 0:
+            raise ValueError(
+                f"dough_thickness_cm must be positive, got {p.dough_thickness_cm}"
+            )
+        if p.thermal_diffusivity <= 0:
+            raise ValueError(
+                f"thermal_diffusivity must be positive, got {p.thermal_diffusivity}"
+            )
+        if p.density <= 0 or p.specific_heat <= 0:
+            raise ValueError(
+                "density and specific_heat must be positive"
+            )
+        if p.surface_heat_transfer < 0:
+            raise ValueError(
+                f"surface_heat_transfer must be non-negative, got {p.surface_heat_transfer}"
+            )
+        if gelatinization_temp_max < gelatinization_temp_min:
+            raise ValueError(
+                "gelatinization_temp_max must be >= gelatinization_temp_min"
+            )
+
         T0 = p.initial_temp_c + 273.15
         T_oven = p.oven_temp_c + 273.15
         T_gel_min = gelatinization_temp_min + 273.15
@@ -50,7 +73,12 @@ class BakingSimulator:
 
         alpha = p.thermal_diffusivity
         total_s = p.baking_time_min * 60.0
-        dt_max = 0.4 * dx_m**2 / alpha
+        h = p.surface_heat_transfer
+        rho_cp = p.density * p.specific_heat
+
+        dt_int = 0.5 * dx_m**2 / alpha
+        dt_bc = 0.5 / (alpha / dx_m**2 + h / (rho_cp * dx_m))
+        dt_max = 0.8 * min(dt_int, dt_bc)
         dt_suggested = total_s / p.n_time
 
         if dt_suggested > dt_max:
@@ -66,8 +94,6 @@ class BakingSimulator:
         T = np.full((n_steps + 1, p.n_spatial), T0)
 
         r = alpha * dt / dx_m**2
-        h = p.surface_heat_transfer
-        rho_cp = p.density * p.specific_heat
 
         for n in range(n_steps):
             T_curr = T[n]
@@ -84,11 +110,10 @@ class BakingSimulator:
 
             T[n + 1] = T_next
 
-        gel_range = T_gel_max - T_gel_min
-        if gel_range > 0:
-            G = np.clip((T - T_gel_min) / gel_range, 0, 1)
-        else:
+        if gelatinization_temp_max == gelatinization_temp_min:
             G = np.where(T >= T_gel_min, 1.0, 0.0)
+        else:
+            G = np.clip((T - T_gel_min) / (T_gel_max - T_gel_min), 0, 1)
 
         M = np.zeros(n_steps + 1)
         for n in range(1, n_steps + 1):
