@@ -71,7 +71,10 @@ const chartOptions = {
   <div>
     <div class="flex" style="justify-content:space-between;margin-bottom:1rem;">
       <h1>Simulazione</h1>
-      <button class="btn-outline" @click="router.push('/simulate/history')">📜 Storico</button>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn-outline" @click="router.push('/simulate/history')">📜 Storico</button>
+        <button class="btn-outline" @click="router.push('/simulate/sweep')">🔁 Sweep</button>
+      </div>
     </div>
 
     <HelpBox title="Aiuto: simulazione e predizione">

@@ -21,6 +21,8 @@ export function deleteBlend(id) { return api.delete(`/blends/${id}`) }
 export function simulate(data) { return api.post('/simulate', data).then(r => r.data) }
 export function listSimulations() { return api.get('/simulate').then(r => r.data) }
 
+export function simulateSweep(data) { return api.post('/simulate/sweep', data).then(r => r.data) }
+
 export function predict(data) { return api.post('/predict', data).then(r => r.data) }
 
 export function getARD() { return api.get('/optimize/ard').then(r => r.data) }
