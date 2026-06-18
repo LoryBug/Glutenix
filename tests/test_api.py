@@ -58,7 +58,7 @@ class TestIngredients:
         resp = client.get("/ingredients")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 17
+        assert len(data) == 19
 
     def test_get_found(self):
         resp = client.get("/ingredients/1")

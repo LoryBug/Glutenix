@@ -99,6 +99,14 @@ INGREDIENT_FLAVOR_PROFILES: dict[str, dict[str, float]] = {
         "neutral": 0.92, "cereal": 0.00, "nutty": 0.00, "earthy": 0.02,
         "bitter": 0.02, "sweet": 0.00, "toasted": 0.00, "rich": 0.00,
     },
+    "amaranth flour": {
+        "neutral": 0.36, "cereal": 0.52, "nutty": 0.32, "earthy": 0.30,
+        "bitter": 0.12, "sweet": 0.16, "toasted": 0.28, "rich": 0.20,
+    },
+    "sodium alginate": {
+        "neutral": 0.88, "cereal": 0.00, "nutty": 0.00, "earthy": 0.03,
+        "bitter": 0.02, "sweet": 0.00, "toasted": 0.00, "rich": 0.00,
+    },
 }
 
 

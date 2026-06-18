@@ -155,9 +155,9 @@ def compare_pasta_cooking_records(
         "after": _metrics(measured, corrected),
         "rows": [row.__dict__ for row in rows],
         "limitations": [
-            "Amaranth is mapped to quinoa flour proxy because amaranth is not in the DB.",
-            "Sodium alginate is mapped to xanthan gum proxy because alginate is not in the DB.",
             "Dataset currently contains only cooking loss examples from one paper.",
+            "Lux et al. uses calcium-mediated alginate gelation; the simulator only includes a simplified alginate retention term.",
+            "Amaranth flour parameters are approximate literature averages.",
             "Linear correction is diagnostic; do not treat as calibrated production model yet.",
         ],
     }

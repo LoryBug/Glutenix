@@ -33,9 +33,9 @@ def seed_database(session=None):
 
 
 def _seed_ingredients(session):
-    if session.query(Ingredient).count() > 0:
-        logger.warning("ingredients_already_seeded")
-        return
+    existing_names = {name for (name,) in session.query(Ingredient.name).all()}
+    if existing_names:
+        logger.warning("ingredients_partially_seeded", existing_count=len(existing_names))
 
     ingredients = [
         Ingredient(
@@ -231,8 +231,33 @@ def _seed_ingredients(session):
             water_absorption=12.0,
             kcal_per_100g=200.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=50.0,
         ),
+        Ingredient(
+            name="Amaranth flour",
+            category="flour",
+            scientific_name="Amaranthus spp.",
+            description="Pseudocereal flour used in gluten-free pasta and bakery applications",
+            protein_pct=13.6, starch_pct=62.0, fat_pct=7.0,
+            fiber_pct=6.7, moisture_pct=10.0, ash_pct=2.9,
+            water_absorption=1.7,
+            gelatinization_temp_min=62, gelatinization_temp_max=68,
+            amylose_pct=8.0,
+            kcal_per_100g=371.0, sugars_pct=1.7, saturated_fat_pct=1.5, sodium_mg_per_100g=4.0,
+        ),
+        Ingredient(
+            name="Sodium alginate",
+            category="hydrocolloid",
+            scientific_name="Alginate sodium salt",
+            description="Alginate hydrocolloid, calcium-gelling, useful for pasta structure and cooking-loss reduction",
+            protein_pct=0.0, starch_pct=0.0, fat_pct=0.0,
+            fiber_pct=80.0, moisture_pct=12.0, ash_pct=8.0,
+            water_absorption=30.0,
+            kcal_per_100g=200.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=9000.0,
+        ),
     ]
-    session.add_all(ingredients)
+    missing = [ingredient for ingredient in ingredients if ingredient.name not in existing_names]
+    if missing:
+        session.add_all(missing)
+        logger.info("ingredients_added", count=len(missing))
 
 
 def _seed_applications(session):
