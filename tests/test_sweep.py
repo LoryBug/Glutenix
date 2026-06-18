@@ -200,6 +200,8 @@ class TestSweepAPI:
         assert data["n_total"] == 16
         assert len(data["points"]) <= 5
         assert data["target_profile"] == "Generico"
+        assert data["target_profile_details"]["evidence_level"] == "heuristic"
+        assert data["target_profile_details"]["sources"]
         if data["points"]:
             p = data["points"][0]
             assert "composite_score" in p
@@ -267,3 +269,31 @@ class TestSweepAPI:
         })
         assert response.status_code == 200, response.text
         assert response.json()["target_profile"] == "Pizza"
+        assert "pizza" in response.json()["target_profile_details"]["rationale"].lower()
+
+    def test_list_target_profiles(self):
+        response = client.get("/simulate/target-profiles")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        names = {profile["name"] for profile in data}
+        assert {"Generico", "Pizza", "Pane", "Frolla"}.issubset(names)
+        pizza = next(profile for profile in data if profile["name"] == "Pizza")
+        assert pizza["evidence_level"] == "heuristic"
+        assert pizza["sources"]
+        assert pizza["volume_target"] > 0
+
+    def test_sweep_application_not_found(self):
+        resp = client.post("/blends", json={
+            "name": "Sweep unknown profile",
+            "ingredients": [
+                {"ingredient_id": 1, "proportion": 1.0},
+            ],
+        })
+        blend_id = resp.json()["id"]
+
+        response = client.post("/simulate/sweep", json={
+            "blend_id": blend_id,
+            "application_id": 99999,
+            "strategy": "random",
+        })
+        assert response.status_code == 404

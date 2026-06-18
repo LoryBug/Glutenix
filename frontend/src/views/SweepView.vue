@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { listApplications, listBlends, simulateSweep } from '../api/client'
+import { listApplications, listBlends, listSweepTargetProfiles, simulateSweep } from '../api/client'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import HelpBox from '../components/HelpBox.vue'
@@ -11,6 +11,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const router = useRouter()
 const blends = ref([])
 const applications = ref([])
+const targetProfiles = ref([])
 const loading = ref(true)
 const running = ref(false)
 const result = ref(null)
@@ -34,12 +35,14 @@ const form = ref({
 })
 
 onMounted(async () => {
-  const [loadedBlends, loadedApplications] = await Promise.all([
+  const [loadedBlends, loadedApplications, loadedProfiles] = await Promise.all([
     listBlends().catch(() => []),
     listApplications().catch(() => []),
+    listSweepTargetProfiles().catch(() => []),
   ])
   blends.value = loadedBlends
   applications.value = loadedApplications
+  targetProfiles.value = loadedProfiles
   loading.value = false
   if (blends.value.length) form.value.blend_id = blends.value[0].id
 })
@@ -57,6 +60,16 @@ async function run() {
 const topScores = computed(() => {
   if (!result.value?.points?.length) return []
   return result.value.points.slice(0, 10)
+})
+
+const selectedApplication = computed(() => {
+  if (!form.value.application_id) return null
+  return applications.value.find(a => a.id === form.value.application_id) || null
+})
+
+const selectedProfile = computed(() => {
+  const profileName = selectedApplication.value?.name || 'Generico'
+  return targetProfiles.value.find(p => p.name === profileName) || null
 })
 
 const chartData = computed(() => {
@@ -110,6 +123,7 @@ const chartOptions = {
     <HelpBox title="Aiuto: sweep parametrico">
       <p>Esegue centinaia di simulazioni variando automaticamente temperatura e durata di fermentazione e cottura, per trovare la combinazione ottimale per il blend scelto.</p>
       <p><strong>Strategia:</strong> <em>grid</em> esplora tutte le combinazioni con lo step indicato; <em>random</em> campiona casualmente <code>n_samples</code> punti. I risultati sono ordinati per <em>composite score</em>, una media pesata di volume, temperatura al cuore, crosta ed efficienza tempo.</p>
+      <p>I profili sono <strong>euristici documentati</strong>: usano range da letteratura e target operativi, ma non sono ancora calibrati su esperimenti reali.</p>
     </HelpBox>
 
     <div class="card mb-2">
@@ -147,6 +161,17 @@ const chartOptions = {
           <label class="text-xs">Seed (opzionale)</label>
           <input v-model.number="form.seed" type="number" placeholder="nessuno">
         </div>
+      </div>
+
+      <div v-if="selectedProfile" style="margin-top:.75rem;padding:.6rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;font-size:.82rem;">
+        <strong>Profilo selezionato: {{ selectedProfile.name }}</strong>
+        <div style="margin-top:.25rem;color:#475569;">{{ selectedProfile.rationale }}</div>
+        <div style="margin-top:.35rem;color:#64748b;">
+          Target: volume {{ (selectedProfile.volume_target * 100).toFixed(0) }}%,
+          core {{ selectedProfile.core_target_c ?? 'gel + offset' }}°C,
+          crosta {{ selectedProfile.crust_target_c }}°C.
+        </div>
+        <div style="margin-top:.25rem;color:#64748b;">Evidenza: {{ selectedProfile.evidence_level }}</div>
       </div>
 
       <details style="margin-top:.75rem;">
@@ -188,6 +213,10 @@ const chartOptions = {
         Risultati — {{ result.points.length }} migliori su {{ result.n_total }} simulazioni
       </h2>
       <p style="font-size:.85rem;color:#666;margin-bottom:.75rem;">Profilo target: <strong>{{ result.target_profile }}</strong></p>
+      <div v-if="result.target_profile_details" style="margin-bottom:1rem;padding:.6rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;font-size:.82rem;">
+        <div><strong>Razionale:</strong> {{ result.target_profile_details.rationale }}</div>
+        <div style="margin-top:.35rem;"><strong>Fonti:</strong> {{ result.target_profile_details.sources.join(', ') }}</div>
+      </div>
 
       <div v-if="chartData" style="max-width:600px;margin-bottom:1rem;">
         <Bar :data="chartData" :options="chartOptions" />

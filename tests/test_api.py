@@ -184,6 +184,65 @@ class TestOptimizeSuggest:
             assert "core_temp_c" in c
             assert len(c["proportions"]) == 2
 
+    def test_application_suggest(self):
+        resp = client.post("/optimize/application-suggest", json={
+            "application_id": 1,
+            "ingredients": [
+                {"ingredient_id": 1, "min_proportion": 0.35, "max_proportion": 0.8},
+                {"ingredient_id": 11, "min_proportion": 0.10, "max_proportion": 0.45},
+                {"ingredient_id": 14, "min_proportion": 0.01, "max_proportion": 0.05},
+            ],
+            "n_candidates": 2,
+            "n_blend_samples": 10,
+            "n_process_samples": 5,
+            "seed": 123,
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["application"] == "Pizza"
+        assert data["target_profile"] == "Pizza"
+        assert data["flavor_target"] == "Pizza"
+        assert len(data["candidates"]) == 2
+        candidate = data["candidates"][0]
+        assert candidate["score"] >= 0
+        assert candidate["process_score"] >= 0
+        assert candidate["blend_score"] >= 0
+        assert candidate["flavor_score"] >= 0
+        assert len(candidate["proportions"]) == 3
+        assert "fermentation_temp_c" in candidate["process"]
+        assert "water_absorption" in candidate["properties"]
+        assert "neutral" in candidate["flavor_profile"]
+
+    def test_flavor_targets(self):
+        resp = client.get("/optimize/flavor-targets")
+        assert resp.status_code == 200
+        data = resp.json()
+        names = {target["name"] for target in data}
+        assert {"Generico", "Pizza", "Pane"}.issubset(names)
+        pizza = next(target for target in data if target["name"] == "Pizza")
+        assert pizza["evidence_level"] == "heuristic"
+        assert "neutral" in pizza["profile"]
+
+    def test_application_suggest_not_found(self):
+        resp = client.post("/optimize/application-suggest", json={
+            "application_id": 999,
+            "ingredients": [{"ingredient_id": 1}, {"ingredient_id": 2}],
+        })
+        assert resp.status_code == 404
+
+    def test_application_suggest_impossible_bounds(self):
+        resp = client.post("/optimize/application-suggest", json={
+            "application_id": 1,
+            "ingredients": [
+                {"ingredient_id": 1, "min_proportion": 0.8, "max_proportion": 1.0},
+                {"ingredient_id": 2, "min_proportion": 0.8, "max_proportion": 1.0},
+            ],
+            "n_blend_samples": 10,
+            "n_process_samples": 5,
+        })
+        assert resp.status_code == 200
+        assert resp.json()["candidates"] == []
+
 
 class TestExperiments:
     def test_crud(self):

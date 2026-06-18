@@ -8,9 +8,37 @@ from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
 from glutenix.engine.fermentation import FermentationParams, FermentationSimulator
 from glutenix.engine.sweep import SimulationSweeper, SweepRange
-from glutenix.engine.targets import get_sweep_target_profile
+from glutenix.engine.targets import (
+    DEFAULT_SWEEP_PROFILE,
+    SWEEP_TARGET_PROFILES,
+    get_sweep_target_profile,
+    serialize_sweep_target_profile,
+)
 
 router = APIRouter(prefix="/simulate", tags=["simulation"])
+
+
+class TargetBlendRangeSchema(BaseModel):
+    min: float
+    max: float
+    weight: float
+
+
+class SweepTargetProfileSchema(BaseModel):
+    name: str
+    volume_target: float
+    volume_sigma: float
+    core_target_c: float | None
+    core_offset_from_gel_max_c: float
+    core_sigma_c: float
+    crust_target_c: float
+    crust_sigma_c: float
+    efficiency_start_min: float
+    efficiency_window_min: float
+    evidence_level: str
+    rationale: str
+    sources: list[str]
+    blend_ranges: dict[str, TargetBlendRangeSchema]
 
 
 @router.get("")
@@ -25,6 +53,12 @@ def list_simulations(db: Session = Depends(get_db)):
         }
         for r in results
     ]
+
+
+@router.get("/target-profiles", response_model=list[SweepTargetProfileSchema])
+def list_target_profiles():
+    profiles = [DEFAULT_SWEEP_PROFILE, *SWEEP_TARGET_PROFILES.values()]
+    return [serialize_sweep_target_profile(profile) for profile in profiles]
 
 
 @router.get("/{simulation_id}")
@@ -172,6 +206,7 @@ class SweepResponse(BaseModel):
     points: list[SweepPointSchema]
     n_total: int
     target_profile: str
+    target_profile_details: SweepTargetProfileSchema
 
 
 @router.post("/sweep", response_model=SweepResponse)
@@ -249,4 +284,5 @@ def sweep_simulation(body: SweepRequest, db: Session = Depends(get_db)):
         ],
         n_total=result.n_total,
         target_profile=target_profile.name,
+        target_profile_details=serialize_sweep_target_profile(target_profile),
     )

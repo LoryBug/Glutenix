@@ -22,6 +22,7 @@ export function simulate(data) { return api.post('/simulate', data).then(r => r.
 export function listSimulations() { return api.get('/simulate').then(r => r.data) }
 
 export function simulateSweep(data) { return api.post('/simulate/sweep', data).then(r => r.data) }
+export function listSweepTargetProfiles() { return api.get('/simulate/target-profiles').then(r => r.data) }
 
 export function predict(data) { return api.post('/predict', data).then(r => r.data) }
 
