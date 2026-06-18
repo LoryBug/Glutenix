@@ -285,6 +285,18 @@ def _seed_ingredients(session):
             water_absorption=25.0,
             kcal_per_100g=180.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=50.0,
         ),
+        Ingredient(
+            name="Soy protein isolate",
+            category="flour",
+            scientific_name="Glycine max protein isolate",
+            description="High-protein soy isolate used to reinforce starch-protein networks in gluten-free pasta",
+            protein_pct=88.0, starch_pct=1.0, fat_pct=1.0,
+            fiber_pct=2.0, moisture_pct=6.0, ash_pct=4.0,
+            water_absorption=2.5,
+            gelatinization_temp_min=None, gelatinization_temp_max=None,
+            amylose_pct=None,
+            kcal_per_100g=335.0, sugars_pct=0.5, saturated_fat_pct=0.2, sodium_mg_per_100g=1000.0,
+        ),
     ]
     missing = [ingredient for ingredient in ingredients if ingredient.name not in existing_names]
     if missing:

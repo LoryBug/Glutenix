@@ -81,6 +81,8 @@ class PastaCookingSimulator:
             self._ingredient_fraction(blend_props, "glucomannan"),
         )
         curdlan = self._ingredient_fraction(blend_props, "curdlan")
+        soy_protein = self._ingredient_fraction(blend_props, "soy protein")
+        waxy_rice = self._ingredient_fraction(blend_props, "sweet rice") + self._ingredient_fraction(blend_props, "waxy")
         protein = blend_props.protein_pct
         amylose = blend_props.amylose_pct
         water_absorption = blend_props.water_absorption
@@ -173,6 +175,8 @@ class PastaCookingSimulator:
         if p.dried_pasta:
             kgm_level = float(np.clip(kgm / 0.045, 0.0, 1.4))
             curdlan_level = float(np.clip(curdlan / 0.022, 0.0, 1.4))
+            soy_pct = soy_protein * 100.0
+            soy_uptake = 8.0 * float(np.clip(soy_pct / 10.0, 0.0, 1.0))
             extrusion_factor = 1.0
             if p.extrusion_moisture_pct is not None:
                 extrusion_factor = float(np.clip(p.extrusion_moisture_pct / 32.0, 0.75, 1.25))
@@ -181,9 +185,10 @@ class PastaCookingSimulator:
                 + 15.0 * kgm_level
                 - 16.0 * np.sqrt(curdlan_level)
                 + 7.0 * curdlan_level
+                + soy_uptake
                 + 4.0 * (extrusion_factor - 1.0),
                 20.0,
-                90.0,
+                260.0,
             ))
 
         optimal_time = 5.5 * thickness_factor / temp_factor
@@ -218,10 +223,16 @@ class PastaCookingSimulator:
         if p.dried_pasta:
             kgm_level = float(np.clip(kgm / 0.045, 0.0, 1.4))
             curdlan_level = float(np.clip(curdlan / 0.022, 0.0, 1.4))
+            soy_level = float(np.clip(soy_protein / 0.05, 0.0, 2.5))
+            soy_network = 9.0 * np.exp(-0.5 * ((soy_level - 1.0) / 0.55) ** 2)
+            high_soy_penalty = 0.5 * max(0.0, soy_level - 1.0)
             loss = (
                 22.7
+                + 27.0 * waxy_rice
                 + 1.7 * kgm_level
                 - 5.4 * np.sqrt(curdlan_level)
+                - soy_network
+                + high_soy_penalty
                 + 0.35 * max(0.0, overcook)
                 + 0.6 * (1.0 - min(amylose / 28.0, 1.0))
             )

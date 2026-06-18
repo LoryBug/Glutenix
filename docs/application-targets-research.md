@@ -562,6 +562,40 @@ Implicazioni per Glutenix:
 
 Confidenza: `high` per pasta di riso estrusa con KGM/CUD; `low-medium` per pasta fresca non estrusa.
 
+### Spaghetti Gluten-Free Di Riso Con SPI: Detchewa et al. 2016
+
+- Titolo: `Preparation of gluten-free rice spaghetti with soy protein isolate using twin-screw extrusion`
+- Autori: Detchewa P, Thongngam M, Jane JL, Naivikul O.
+- Journal: `Journal of Food Science and Technology`, 2016, 53(9):3485-3494.
+- DOI: `10.1007/s13197-016-2323-8`
+- PMCID: `PMC5069250`
+- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC5069250/`
+
+Design:
+
+- Base: dry-milled high-amylose rice flour CNT1 + waxy rice flour RD6 in ratio `90:10`.
+- Soy protein isolate: `0%`, `2.5%`, `5.0%`, `7.5%`, `10.0%` dry basis.
+- Twin-screw extrusion, moisture `32%`, screw speed `220 rpm`.
+- Barrel temperatures: `40`, `70`, `95`, `95`, `95`, `80`, `70 C`.
+
+Dati utili da Table 3:
+
+| Sample | SPI % | Cooking time min | Cooking loss % | Water adsorption index % |
+|---|---:|---:|---:|---:|
+| GFRS-SPI0 | 0.0 | 17.6 | 25.4 | 246.2 |
+| GFRS-SPI2.5 | 2.5 | 14.7 | 18.1 | 247.6 |
+| GFRS-SPI5.0 | 5.0 | 13.7 | 17.0 | 248.1 |
+| GFRS-SPI7.5 | 7.5 | 13.1 | 21.0 | 253.4 |
+| GFRS-SPI10 | 10.0 | 13.1 | 21.8 | 254.3 |
+
+Implicazioni per Glutenix:
+
+- SPI ha effetto non lineare: migliora cooking loss fino a circa `5%`, poi l'eccesso peggiora la struttura.
+- Il water adsorption index e molto piu alto rispetto ai record Liu/Lux e va trattato come metrica separata finche il modello non distingue scale/metodi.
+- Questo paper e utile per validare la branca `dried_extruded` con proteine, non solo idrocolloidi.
+
+Confidenza: `high` per spaghetti di riso estrusi con SPI; `low-medium` per pasta fresca non estrusa.
+
 ### Review Pane Gluten-Free: Alibekova et al. 2026
 
 - Titolo: `Problems and Approaches in the Improvement of Gluten-Free Bread Texture: A Comprehensive Review`
