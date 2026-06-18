@@ -245,7 +245,12 @@ class TestPastaCookingSimulator:
         assert result.core_temp_c > 20
         assert result.water_uptake_pct > 0
         assert result.cooking_loss_pct > 0
+        assert result.swelling_index > 0
         assert 0 <= result.quality_score <= 1
+        assert 0 <= result.gelation_index <= 1.6
+        assert 0 <= result.pregelatinization_index <= 1.0
+        assert 0 <= result.syneresis_index <= 1.4
+        assert 0 <= result.starch_leaching_index <= 1.4
 
     def test_overcooking_increases_loss(self):
         props = BlendProperties(
@@ -282,6 +287,143 @@ class TestPastaCookingSimulator:
         sim = PastaCookingSimulator()
         assert sim.simulate(structured).cooking_loss_pct < sim.simulate(weak).cooking_loss_pct
 
+    def test_calcium_alginate_gelation_reduces_cooking_loss(self):
+        props = BlendProperties(
+            protein_pct=13.0,
+            starch_pct=62.0,
+            water_absorption=2.0,
+            gelatinization_temp_min=62.0,
+            gelatinization_temp_max=68.0,
+            amylose_pct=8.0,
+            hydrocolloid_pct=0.015,
+            ingredients_detail=[
+                {"name": "Amaranth flour", "proportion": 0.985, "category": "flour"},
+                {"name": "Sodium alginate", "proportion": 0.015, "category": "hydrocolloid"},
+            ],
+        )
+        no_calcium = PastaCookingSimulator(
+            PastaCookingParams(water_to_flour_ratio=6.0, cooking_time_min=10.0)
+        ).simulate(props)
+        calcium = PastaCookingSimulator(
+            PastaCookingParams(
+                water_to_flour_ratio=6.0,
+                cooking_time_min=10.0,
+                calcium_lactate_m=0.1,
+                calcium_bath_time_min=30.0,
+            )
+        ).simulate(props)
+
+        assert calcium.gelation_index > no_calcium.gelation_index
+        assert calcium.cooking_loss_pct < no_calcium.cooking_loss_pct
+
+    def test_pregelatinization_reduces_starch_leaching(self):
+        props = BlendProperties(
+            protein_pct=13.0,
+            starch_pct=62.0,
+            water_absorption=2.0,
+            gelatinization_temp_min=62.0,
+            gelatinization_temp_max=68.0,
+            amylose_pct=8.0,
+            hydrocolloid_pct=0.01,
+        )
+        raw = PastaCookingSimulator(
+            PastaCookingParams(water_to_flour_ratio=4.0, cooking_time_min=10.0)
+        ).simulate(props)
+        heated = PastaCookingSimulator(
+            PastaCookingParams(
+                water_to_flour_ratio=4.0,
+                cooking_time_min=10.0,
+                dough_heat_temp_c=80.0,
+                dough_heat_time_min=60.0,
+            )
+        ).simulate(props)
+
+        assert heated.pregelatinization_index > raw.pregelatinization_index
+        assert heated.starch_leaching_index < raw.starch_leaching_index
+
+    def test_high_water_alginate_process_can_show_syneresis(self):
+        props = BlendProperties(
+            protein_pct=13.0,
+            starch_pct=62.0,
+            water_absorption=2.0,
+            gelatinization_temp_min=62.0,
+            gelatinization_temp_max=68.0,
+            amylose_pct=8.0,
+            hydrocolloid_pct=0.015,
+            ingredients_detail=[
+                {"name": "Amaranth flour", "proportion": 0.985, "category": "flour"},
+                {"name": "Sodium alginate", "proportion": 0.015, "category": "hydrocolloid"},
+            ],
+        )
+        low_water = PastaCookingSimulator(
+            PastaCookingParams(
+                water_to_flour_ratio=2.0,
+                cooking_time_min=10.0,
+                calcium_lactate_m=0.1,
+                calcium_bath_time_min=30.0,
+            )
+        ).simulate(props)
+        high_water = PastaCookingSimulator(
+            PastaCookingParams(
+                water_to_flour_ratio=10.0,
+                cooking_time_min=10.0,
+                calcium_lactate_m=0.1,
+                calcium_bath_time_min=30.0,
+            )
+        ).simulate(props)
+
+        assert high_water.syneresis_index > low_water.syneresis_index
+        assert high_water.water_uptake_pct < low_water.water_uptake_pct
+
+    def test_dried_rice_pasta_kgm_curdlan_effects(self):
+        rf = BlendProperties(
+            protein_pct=7.0,
+            starch_pct=78.16,
+            water_absorption=1.3,
+            gelatinization_temp_min=70.55,
+            gelatinization_temp_max=79.12,
+            amylose_pct=28.12,
+            hydrocolloid_pct=0.0,
+            ingredients_detail=[
+                {"name": "High-amylose rice flour", "proportion": 1.0, "category": "flour"},
+            ],
+        )
+        kgm = BlendProperties(
+            protein_pct=6.7,
+            starch_pct=74.66,
+            water_absorption=2.8,
+            gelatinization_temp_min=70.55,
+            gelatinization_temp_max=79.12,
+            amylose_pct=28.12,
+            hydrocolloid_pct=0.045,
+            ingredients_detail=[
+                {"name": "High-amylose rice flour", "proportion": 0.955, "category": "flour"},
+                {"name": "Konjac glucomannan", "proportion": 0.045, "category": "hydrocolloid"},
+            ],
+        )
+        kgm_curdlan = BlendProperties(
+            protein_pct=6.5,
+            starch_pct=73.0,
+            water_absorption=3.2,
+            gelatinization_temp_min=70.55,
+            gelatinization_temp_max=79.12,
+            amylose_pct=28.12,
+            hydrocolloid_pct=0.066,
+            ingredients_detail=[
+                {"name": "High-amylose rice flour", "proportion": 0.934, "category": "flour"},
+                {"name": "Konjac glucomannan", "proportion": 0.044, "category": "hydrocolloid"},
+                {"name": "Curdlan", "proportion": 0.022, "category": "hydrocolloid"},
+            ],
+        )
+        params = PastaCookingParams(dried_pasta=True, extrusion_moisture_pct=32.0)
+        rf_result = PastaCookingSimulator(params).simulate(rf)
+        kgm_result = PastaCookingSimulator(params).simulate(kgm)
+        curdlan_result = PastaCookingSimulator(params).simulate(kgm_curdlan)
+
+        assert kgm_result.water_uptake_pct > rf_result.water_uptake_pct
+        assert kgm_result.cooking_loss_pct > rf_result.cooking_loss_pct
+        assert curdlan_result.cooking_loss_pct < kgm_result.cooking_loss_pct
+
     def test_rejects_invalid_params(self):
         import pytest
 
@@ -290,3 +432,9 @@ class TestPastaCookingSimulator:
             PastaCookingSimulator(PastaCookingParams(cooking_time_min=0)).simulate(props)
         with pytest.raises(ValueError):
             PastaCookingSimulator(PastaCookingParams(pasta_thickness_mm=0)).simulate(props)
+        with pytest.raises(ValueError):
+            PastaCookingSimulator(PastaCookingParams(water_to_flour_ratio=0)).simulate(props)
+        with pytest.raises(ValueError):
+            PastaCookingSimulator(PastaCookingParams(calcium_lactate_m=-0.1)).simulate(props)
+        with pytest.raises(ValueError):
+            PastaCookingSimulator(PastaCookingParams(extrusion_moisture_pct=0)).simulate(props)

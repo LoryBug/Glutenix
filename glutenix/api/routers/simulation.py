@@ -104,6 +104,13 @@ class CookingRequest(BaseModel):
     water_temp_c: float = Field(default=98.0, gt=20, le=105)
     cooking_time_min: float = Field(default=6.0, gt=0, le=60)
     pasta_thickness_mm: float = Field(default=2.0, gt=0, le=10)
+    water_to_flour_ratio: float | None = Field(default=None, gt=0, le=20)
+    calcium_lactate_m: float = Field(default=0.0, ge=0, le=1.0)
+    calcium_bath_time_min: float = Field(default=0.0, ge=0, le=240)
+    dough_heat_temp_c: float = Field(default=0.0, ge=0, le=120)
+    dough_heat_time_min: float = Field(default=0.0, ge=0, le=240)
+    dried_pasta: bool = False
+    extrusion_moisture_pct: float | None = Field(default=None, gt=0, le=100)
 
 
 class CookingResponse(BaseModel):
@@ -116,9 +123,14 @@ class CookingResponse(BaseModel):
     core_temp_c: float
     water_uptake_pct: float
     cooking_loss_pct: float
+    swelling_index: float
     firmness_index: float
     stickiness_index: float
     quality_score: float
+    gelation_index: float
+    pregelatinization_index: float
+    syneresis_index: float
+    starch_leaching_index: float
 
 
 @router.post("/cooking", response_model=CookingResponse)
@@ -138,6 +150,13 @@ def simulate_cooking(body: CookingRequest, db: Session = Depends(get_db)):
             water_temp_c=body.water_temp_c,
             cooking_time_min=body.cooking_time_min,
             pasta_thickness_mm=body.pasta_thickness_mm,
+            water_to_flour_ratio=body.water_to_flour_ratio,
+            calcium_lactate_m=body.calcium_lactate_m,
+            calcium_bath_time_min=body.calcium_bath_time_min,
+            dough_heat_temp_c=body.dough_heat_temp_c,
+            dough_heat_time_min=body.dough_heat_time_min,
+            dried_pasta=body.dried_pasta,
+            extrusion_moisture_pct=body.extrusion_moisture_pct,
         )
     )
     result = simulator.simulate(props)
@@ -152,9 +171,14 @@ def simulate_cooking(body: CookingRequest, db: Session = Depends(get_db)):
         core_temp_c=result.core_temp_c,
         water_uptake_pct=result.water_uptake_pct,
         cooking_loss_pct=result.cooking_loss_pct,
+        swelling_index=result.swelling_index,
         firmness_index=result.firmness_index,
         stickiness_index=result.stickiness_index,
         quality_score=result.quality_score,
+        gelation_index=result.gelation_index,
+        pregelatinization_index=result.pregelatinization_index,
+        syneresis_index=result.syneresis_index,
+        starch_leaching_index=result.starch_leaching_index,
     )
 
 

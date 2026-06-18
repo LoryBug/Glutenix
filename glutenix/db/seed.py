@@ -253,6 +253,38 @@ def _seed_ingredients(session):
             water_absorption=30.0,
             kcal_per_100g=200.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=9000.0,
         ),
+        Ingredient(
+            name="High-amylose rice flour",
+            category="flour",
+            scientific_name="Oryza sativa high-amylose cultivar",
+            description="Rice flour with elevated amylose content used for extruded gluten-free pasta",
+            protein_pct=7.0, starch_pct=78.16, fat_pct=1.0,
+            fiber_pct=1.5, moisture_pct=12.0, ash_pct=0.6,
+            water_absorption=1.3,
+            gelatinization_temp_min=70.55, gelatinization_temp_max=79.12,
+            amylose_pct=28.12,
+            kcal_per_100g=365.0, sugars_pct=0.1, saturated_fat_pct=0.2, sodium_mg_per_100g=2.0,
+        ),
+        Ingredient(
+            name="Konjac glucomannan",
+            category="hydrocolloid",
+            scientific_name="Amorphophallus konjac glucomannan",
+            description="Highly hydrophilic neutral polysaccharide used for viscosity, water retention, and starch-digestion reduction",
+            protein_pct=0.0, starch_pct=0.0, fat_pct=0.0,
+            fiber_pct=85.0, moisture_pct=8.0, ash_pct=2.0,
+            water_absorption=35.0,
+            kcal_per_100g=180.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=80.0,
+        ),
+        Ingredient(
+            name="Curdlan",
+            category="hydrocolloid",
+            scientific_name="Beta-1,3-glucan curdlan",
+            description="Thermo-irreversible heat-setting beta-glucan gel former used in rice pasta structure",
+            protein_pct=0.0, starch_pct=0.0, fat_pct=0.0,
+            fiber_pct=90.0, moisture_pct=8.0, ash_pct=1.0,
+            water_absorption=25.0,
+            kcal_per_100g=180.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=50.0,
+        ),
     ]
     missing = [ingredient for ingredient in ingredients if ingredient.name not in existing_names]
     if missing:

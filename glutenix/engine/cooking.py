@@ -11,6 +11,13 @@ class PastaCookingParams:
     cooking_time_min: float = 6.0
     pasta_thickness_mm: float = 2.0
     initial_temp_c: float = 20.0
+    water_to_flour_ratio: float | None = None
+    calcium_lactate_m: float = 0.0
+    calcium_bath_time_min: float = 0.0
+    dough_heat_temp_c: float = 0.0
+    dough_heat_time_min: float = 0.0
+    dried_pasta: bool = False
+    extrusion_moisture_pct: float | None = None
 
 
 @dataclass
@@ -18,9 +25,14 @@ class PastaCookingResult:
     core_temp_c: float
     water_uptake_pct: float
     cooking_loss_pct: float
+    swelling_index: float
     firmness_index: float
     stickiness_index: float
     quality_score: float
+    gelation_index: float
+    pregelatinization_index: float
+    syneresis_index: float
+    starch_leaching_index: float
 
 
 class PastaCookingSimulator:
@@ -44,10 +56,19 @@ class PastaCookingSimulator:
             raise ValueError("cooking_time_min must be positive")
         if p.pasta_thickness_mm <= 0:
             raise ValueError("pasta_thickness_mm must be positive")
+        if p.water_to_flour_ratio is not None and p.water_to_flour_ratio <= 0:
+            raise ValueError("water_to_flour_ratio must be positive")
+        if p.calcium_lactate_m < 0:
+            raise ValueError("calcium_lactate_m must be non-negative")
+        if p.calcium_bath_time_min < 0:
+            raise ValueError("calcium_bath_time_min must be non-negative")
+        if p.dough_heat_time_min < 0:
+            raise ValueError("dough_heat_time_min must be non-negative")
+        if p.extrusion_moisture_pct is not None and p.extrusion_moisture_pct <= 0:
+            raise ValueError("extrusion_moisture_pct must be positive")
 
         temp_factor = float(np.clip((p.water_temp_c - 60.0) / 38.0, 0.05, 1.25))
         thickness_factor = max(p.pasta_thickness_mm / 2.0, 0.25)
-        time_factor = p.cooking_time_min / thickness_factor
 
         core_temp = p.initial_temp_c + (p.water_temp_c - p.initial_temp_c) * (
             1.0 - np.exp(-0.55 * p.cooking_time_min / (thickness_factor**2))
@@ -55,9 +76,15 @@ class PastaCookingSimulator:
 
         hydrocolloid = blend_props.hydrocolloid_pct
         alginate = self._ingredient_fraction(blend_props, "alginate")
+        kgm = max(
+            self._ingredient_fraction(blend_props, "konjac"),
+            self._ingredient_fraction(blend_props, "glucomannan"),
+        )
+        curdlan = self._ingredient_fraction(blend_props, "curdlan")
         protein = blend_props.protein_pct
         amylose = blend_props.amylose_pct
         water_absorption = blend_props.water_absorption
+        water_to_flour = p.water_to_flour_ratio
 
         structure = float(np.clip(
             0.28 * protein / 12.0
@@ -67,29 +94,158 @@ class PastaCookingSimulator:
             0.0,
             1.8,
         ))
-        alginate_gel = float(np.clip(alginate / 0.015, 0.0, 1.5))
+        alginate_level = float(np.clip(alginate / 0.015, 0.0, 1.5))
+        if p.calcium_lactate_m > 0 and p.calcium_bath_time_min > 0:
+            calcium_factor = 1.0 - np.exp(-p.calcium_lactate_m / 0.035)
+            bath_factor = 1.0 - np.exp(-p.calcium_bath_time_min / 10.0)
+            water_factor = 1.0
+            if water_to_flour is not None:
+                water_factor = float(np.clip(0.65 + 0.07 * water_to_flour, 0.65, 1.25))
+            alginate_gel = float(np.clip(alginate_level * calcium_factor * bath_factor * water_factor, 0.0, 1.6))
+        else:
+            alginate_gel = float(np.clip(0.55 * alginate_level, 0.0, 0.8))
 
-        max_uptake = float(np.clip(45.0 + 35.0 * water_absorption, 55.0, 130.0))
-        hydration_rate = 0.32 * temp_factor / thickness_factor
-        water_uptake = max_uptake * (1.0 - np.exp(-hydration_rate * p.cooking_time_min))
+        if p.dough_heat_temp_c > 0 and p.dough_heat_time_min > 0:
+            gel_mid = (blend_props.gelatinization_temp_min + blend_props.gelatinization_temp_max) / 2.0
+            heat_factor = float(np.clip((p.dough_heat_temp_c - gel_mid + 8.0) / 18.0, 0.0, 1.15))
+            time_heat_factor = float(1.0 - np.exp(-p.dough_heat_time_min / 25.0))
+            water_factor = 1.0
+            if water_to_flour is not None:
+                low_water = max(0.0, (3.0 - water_to_flour) / 2.0)
+                excess_water = max(0.0, (water_to_flour - 8.0) / 5.0)
+                water_factor = float(np.clip(1.0 - 0.35 * low_water - 0.12 * excess_water, 0.45, 1.05))
+            pregelatinization = float(np.clip(heat_factor * time_heat_factor * water_factor, 0.0, 1.0))
+        else:
+            pregelatinization = 0.0
+
+        low_water_damage = 0.0
+        excess_water = 0.0
+        gel_syneresis_drive = 0.0
+        dilution_syneresis_drive = 0.0
+        high_alginate_syneresis = 0.0
+        if water_to_flour is not None:
+            low_water_damage = float(np.clip((3.0 - water_to_flour) / 2.0, 0.0, 1.0))
+            excess_water = float(np.clip((water_to_flour - 5.0) / 5.0, 0.0, 1.4))
+            high_alginate_syneresis = float(np.clip((alginate_level - 0.65) / 0.35, 0.0, 1.0))
+            gel_syneresis_drive = high_alginate_syneresis * float(np.clip((water_to_flour - 2.0) / 4.0, 0.0, 0.85))
+            dilution_syneresis_drive = float(np.clip((water_to_flour - 8.0) / 2.0, 0.0, 1.0)) * (
+                0.7 + 0.5 * min(alginate_level, 1.0)
+            )
+
+        syneresis_drive = max(gel_syneresis_drive, dilution_syneresis_drive)
+        cooking_time_release = 1.0 - np.exp(-p.cooking_time_min / 7.0)
+        syneresis = float(np.clip(
+            alginate_gel
+            * syneresis_drive
+            * cooking_time_release,
+            0.0,
+            1.4,
+        ))
+
+        if water_to_flour is None:
+            max_uptake = float(np.clip(45.0 + 35.0 * water_absorption, 55.0, 130.0))
+            hydration_rate = 0.32 * temp_factor / thickness_factor
+            water_uptake = max_uptake * (1.0 - np.exp(-hydration_rate * p.cooking_time_min))
+        else:
+            max_uptake = float(np.clip(
+                18.0
+                + 7.0 * (1.0 - min(alginate_gel, 1.0))
+                + 5.0 * low_water_damage
+                + 2.0 * water_absorption,
+                8.0,
+                34.0,
+            ))
+            hydration_rate = 0.075 * temp_factor / thickness_factor
+            gel_water_release = 8.0 * gel_syneresis_drive * cooking_time_release * (1.0 - min(dilution_syneresis_drive, 1.0))
+            dilution_water_release = (
+                14.0
+                * min(dilution_syneresis_drive, 1.0)
+                * cooking_time_release
+                * (1.0 - 0.7 * high_alginate_syneresis)
+            )
+            water_uptake = (
+                max_uptake * (1.0 - np.exp(-hydration_rate * p.cooking_time_min))
+                - 24.0 * syneresis
+                - gel_water_release
+                - dilution_water_release
+            )
+
+        if p.dried_pasta:
+            kgm_level = float(np.clip(kgm / 0.045, 0.0, 1.4))
+            curdlan_level = float(np.clip(curdlan / 0.022, 0.0, 1.4))
+            extrusion_factor = 1.0
+            if p.extrusion_moisture_pct is not None:
+                extrusion_factor = float(np.clip(p.extrusion_moisture_pct / 32.0, 0.75, 1.25))
+            water_uptake = float(np.clip(
+                42.0
+                + 15.0 * kgm_level
+                - 16.0 * np.sqrt(curdlan_level)
+                + 7.0 * curdlan_level
+                + 4.0 * (extrusion_factor - 1.0),
+                20.0,
+                90.0,
+            ))
 
         optimal_time = 5.5 * thickness_factor / temp_factor
         undercook = max(0.0, (optimal_time - p.cooking_time_min) / optimal_time)
         overcook = max(0.0, (p.cooking_time_min - optimal_time) / optimal_time)
 
+        starch_leaching = float(np.clip(
+            0.32 * (1.0 - min(structure / 1.4, 1.0))
+            + 0.30 * (1.0 - min(alginate_gel, 1.0))
+            + 0.20 * (1.0 - pregelatinization)
+            + 0.12 * low_water_damage
+            + 0.10 * max(0.0, overcook)
+            - 0.10 * syneresis,
+            0.0,
+            1.4,
+        ))
+
+        overcook_loss = 2.1 * overcook * (1.0 - 0.75 * min(alginate_gel, 1.0))
         loss = (
-            7.5
-            - 3.0 * structure
-            - 3.8 * alginate_gel
-            + 2.5 * overcook
+            6.2
+            - 2.0 * structure
+            - 5.0 * alginate_gel
+            - 1.15 * pregelatinization
+            + overcook_loss
             + 1.2 * max(0.0, water_uptake - 85.0) / 45.0
             + 0.8 * blend_props.starch_pct / 85.0
+            + 0.45 * low_water_damage
+            + 0.35 * excess_water * (1.0 - min(alginate_gel, 1.0))
+            + 1.2 * starch_leaching
+            - 0.10 * syneresis
         )
-        cooking_loss = float(np.clip(loss, 0.5, 18.0))
+        if p.dried_pasta:
+            kgm_level = float(np.clip(kgm / 0.045, 0.0, 1.4))
+            curdlan_level = float(np.clip(curdlan / 0.022, 0.0, 1.4))
+            loss = (
+                22.7
+                + 1.7 * kgm_level
+                - 5.4 * np.sqrt(curdlan_level)
+                + 0.35 * max(0.0, overcook)
+                + 0.6 * (1.0 - min(amylose / 28.0, 1.0))
+            )
+        cooking_loss = float(np.clip(loss, 0.35, 30.0))
+
+        if water_to_flour is None:
+            swelling_index = float(np.clip(2.2 + water_uptake / 22.0, 2.0, 10.0))
+        else:
+            swelling_index = float(np.clip(
+                2.0
+                + 0.72 * water_to_flour
+                + 0.8 * pregelatinization
+                - 0.55 * syneresis
+                - 0.35 * low_water_damage,
+                2.0,
+                10.5,
+            ))
 
         firmness = float(np.clip(
             0.72
             + 0.18 * structure
+            + 0.18 * alginate_gel
+            + 0.10 * pregelatinization
+            + 0.08 * syneresis
             - 0.42 * overcook
             + 0.22 * undercook,
             0.0,
@@ -100,7 +256,8 @@ class PastaCookingSimulator:
             + 0.055 * cooking_loss
             + 0.25 * overcook
             - 0.12 * hydrocolloid / 0.025
-            - 0.18 * alginate_gel,
+            - 0.18 * alginate_gel
+            - 0.06 * pregelatinization,
             0.0,
             1.0,
         ))
@@ -122,7 +279,12 @@ class PastaCookingSimulator:
             core_temp_c=round(float(core_temp), 2),
             water_uptake_pct=round(float(water_uptake), 2),
             cooking_loss_pct=round(float(cooking_loss), 2),
+            swelling_index=round(swelling_index, 4),
             firmness_index=round(firmness, 4),
             stickiness_index=round(stickiness, 4),
             quality_score=round(quality, 4),
+            gelation_index=round(alginate_gel, 4),
+            pregelatinization_index=round(pregelatinization, 4),
+            syneresis_index=round(syneresis, 4),
+            starch_leaching_index=round(starch_leaching, 4),
         )

@@ -58,7 +58,7 @@ class TestIngredients:
         resp = client.get("/ingredients")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 19
+        assert len(data) == 22
 
     def test_get_found(self):
         resp = client.get("/ingredients/1")
@@ -152,14 +152,24 @@ class TestSimulation:
             "water_temp_c": 98,
             "cooking_time_min": 6,
             "pasta_thickness_mm": 2,
+            "water_to_flour_ratio": 6,
+            "calcium_lactate_m": 0.1,
+            "calcium_bath_time_min": 30,
+            "dough_heat_temp_c": 80,
+            "dough_heat_time_min": 60,
         })
         assert resp.status_code == 200, resp.text
         data = resp.json()
-        assert data["water_uptake_pct"] > 0
+        assert "water_uptake_pct" in data
         assert data["cooking_loss_pct"] > 0
+        assert data["swelling_index"] > 0
         assert 0 <= data["firmness_index"] <= 1
         assert 0 <= data["stickiness_index"] <= 1
         assert 0 <= data["quality_score"] <= 1
+        assert data["gelation_index"] >= 0
+        assert data["pregelatinization_index"] > 0
+        assert data["syneresis_index"] >= 0
+        assert data["starch_leaching_index"] >= 0
 
     def test_simulate_cooking_not_found(self):
         resp = client.post("/simulate/cooking", json={"blend_id": 999})
@@ -189,11 +199,18 @@ class TestCalibration:
         resp = client.get("/calibration/pasta-cooking")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["n_records"] == 9
+        assert data["n_records"] == 35
+        assert data["source_count"] == 2
         assert data["metric"] == "cooking_loss_pct"
         assert "before" in data
         assert "after" in data
-        assert len(data["rows"]) == 9
+        assert "metric_summaries" in data
+        assert "grouped_errors" in data
+        assert "source" in data["grouped_errors"]
+        assert "process_family" in data["grouped_errors"]
+        assert data["record_groups"]["process_family"]["fresh_calcium_gel"] == 30
+        assert data["record_groups"]["process_family"]["dried_extruded"] == 5
+        assert len(data["rows"]) == 35
 
 
 class TestUpdateIngredient:

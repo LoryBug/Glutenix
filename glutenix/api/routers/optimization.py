@@ -284,6 +284,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                     PastaCookingParams(
                         water_temp_c=point["baking_temp_c"],
                         cooking_time_min=point["baking_duration_min"],
+                        water_to_flour_ratio=0.9,
                     )
                 ).simulate(blend_props)
                 if best_cooking is None or cooking.quality_score > best_cooking.quality_score:
@@ -296,13 +297,19 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 "water_temp_c": best_point["baking_temp_c"],
                 "cooking_time_min": best_point["baking_duration_min"],
                 "pasta_thickness_mm": 2.0,
+                "water_to_flour_ratio": 0.9,
             }
             cooking_metrics = {
                 "water_uptake_pct": best_cooking.water_uptake_pct,
                 "cooking_loss_pct": best_cooking.cooking_loss_pct,
+                "swelling_index": best_cooking.swelling_index,
                 "firmness_index": best_cooking.firmness_index,
                 "stickiness_index": best_cooking.stickiness_index,
                 "quality_score": best_cooking.quality_score,
+                "gelation_index": best_cooking.gelation_index,
+                "pregelatinization_index": best_cooking.pregelatinization_index,
+                "syneresis_index": best_cooking.syneresis_index,
+                "starch_leaching_index": best_cooking.starch_leaching_index,
             }
             volume_pct = 0.0
             core_temp = best_cooking.core_temp_c

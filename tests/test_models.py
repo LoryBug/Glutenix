@@ -37,7 +37,7 @@ class TestIngredientModel:
         _seed_applications(db_session)
         db_session.commit()
 
-        assert db_session.query(Ingredient).count() == 19
+        assert db_session.query(Ingredient).count() == 22
         assert db_session.query(Application).count() == 5
 
 
