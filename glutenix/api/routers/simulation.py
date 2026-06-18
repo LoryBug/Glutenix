@@ -6,6 +6,7 @@ from glutenix.api.deps import get_db
 from glutenix.db.models import Application, Blend, SimulationResult
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
+from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
 from glutenix.engine.fermentation import FermentationParams, FermentationSimulator
 from glutenix.engine.sweep import SimulationSweeper, SweepRange
 from glutenix.engine.targets import (
@@ -96,6 +97,65 @@ class SimulateResponse(BaseModel):
     fermentation_volume_increase: float
     baking_core_temp_c: float
     baking_crust_temp_c: float
+
+
+class CookingRequest(BaseModel):
+    blend_id: int
+    water_temp_c: float = Field(default=98.0, gt=20, le=105)
+    cooking_time_min: float = Field(default=6.0, gt=0, le=60)
+    pasta_thickness_mm: float = Field(default=2.0, gt=0, le=10)
+
+
+class CookingResponse(BaseModel):
+    protein_pct: float
+    starch_pct: float
+    water_absorption: float
+    viscosity_index: float
+    hydrocolloid_pct: float
+    amylose_pct: float
+    core_temp_c: float
+    water_uptake_pct: float
+    cooking_loss_pct: float
+    firmness_index: float
+    stickiness_index: float
+    quality_score: float
+
+
+@router.post("/cooking", response_model=CookingResponse)
+def simulate_cooking(body: CookingRequest, db: Session = Depends(get_db)):
+    blend = db.query(Blend).filter(Blend.id == body.blend_id).first()
+    if not blend:
+        raise HTTPException(404, detail="Blend not found")
+    if not blend.ingredients:
+        raise HTTPException(400, detail="Blend has no ingredients")
+
+    calc = BlendCalculator()
+    props = calc.calculate(
+        [(bi.ingredient, bi.proportion) for bi in blend.ingredients]
+    )
+    simulator = PastaCookingSimulator(
+        PastaCookingParams(
+            water_temp_c=body.water_temp_c,
+            cooking_time_min=body.cooking_time_min,
+            pasta_thickness_mm=body.pasta_thickness_mm,
+        )
+    )
+    result = simulator.simulate(props)
+
+    return CookingResponse(
+        protein_pct=round(props.protein_pct, 4),
+        starch_pct=round(props.starch_pct, 4),
+        water_absorption=round(props.water_absorption, 4),
+        viscosity_index=round(props.viscosity_index, 4),
+        hydrocolloid_pct=round(props.hydrocolloid_pct, 4),
+        amylose_pct=round(props.amylose_pct, 4),
+        core_temp_c=result.core_temp_c,
+        water_uptake_pct=result.water_uptake_pct,
+        cooking_loss_pct=result.cooking_loss_pct,
+        firmness_index=result.firmness_index,
+        stickiness_index=result.stickiness_index,
+        quality_score=result.quality_score,
+    )
 
 
 @router.post("", response_model=SimulateResponse)

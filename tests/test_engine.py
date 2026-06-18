@@ -3,6 +3,11 @@ import numpy as np
 from glutenix.db.models import Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator, BlendProperties
+from glutenix.engine.cooking import (
+    PastaCookingParams,
+    PastaCookingResult,
+    PastaCookingSimulator,
+)
 from glutenix.engine.fermentation import (
     FermentationParams,
     FermentationResult,
@@ -224,3 +229,64 @@ class TestBakingSimulator:
         sim = BakingSimulator(params)
         result = sim.simulate()
         assert result.core_temp_c < 100.0
+
+
+class TestPastaCookingSimulator:
+    def test_simulate_returns_result(self):
+        props = BlendProperties(
+            protein_pct=8.0,
+            starch_pct=72.0,
+            water_absorption=1.3,
+            amylose_pct=22.0,
+            hydrocolloid_pct=0.015,
+        )
+        result = PastaCookingSimulator().simulate(props)
+        assert isinstance(result, PastaCookingResult)
+        assert result.core_temp_c > 20
+        assert result.water_uptake_pct > 0
+        assert result.cooking_loss_pct > 0
+        assert 0 <= result.quality_score <= 1
+
+    def test_overcooking_increases_loss(self):
+        props = BlendProperties(
+            protein_pct=8.0,
+            starch_pct=72.0,
+            water_absorption=1.3,
+            amylose_pct=22.0,
+            hydrocolloid_pct=0.015,
+        )
+        short = PastaCookingSimulator(
+            PastaCookingParams(cooking_time_min=4.0)
+        ).simulate(props)
+        long = PastaCookingSimulator(
+            PastaCookingParams(cooking_time_min=14.0)
+        ).simulate(props)
+        assert long.cooking_loss_pct > short.cooking_loss_pct
+        assert long.stickiness_index >= short.stickiness_index
+
+    def test_hydrocolloid_reduces_cooking_loss(self):
+        weak = BlendProperties(
+            protein_pct=4.0,
+            starch_pct=85.0,
+            water_absorption=1.0,
+            amylose_pct=15.0,
+            hydrocolloid_pct=0.0,
+        )
+        structured = BlendProperties(
+            protein_pct=8.0,
+            starch_pct=70.0,
+            water_absorption=1.4,
+            amylose_pct=24.0,
+            hydrocolloid_pct=0.02,
+        )
+        sim = PastaCookingSimulator()
+        assert sim.simulate(structured).cooking_loss_pct < sim.simulate(weak).cooking_loss_pct
+
+    def test_rejects_invalid_params(self):
+        import pytest
+
+        props = BlendProperties()
+        with pytest.raises(ValueError):
+            PastaCookingSimulator(PastaCookingParams(cooking_time_min=0)).simulate(props)
+        with pytest.raises(ValueError):
+            PastaCookingSimulator(PastaCookingParams(pasta_thickness_mm=0)).simulate(props)

@@ -135,6 +135,36 @@ class TestSimulation:
         resp = client.post("/simulate", json={"blend_id": 999})
         assert resp.status_code == 404
 
+    def test_simulate_cooking(self):
+        resp = client.post("/blends", json={
+            "name": "Cooking blend",
+            "ingredients": [
+                {"ingredient_id": 1, "proportion": 0.55},
+                {"ingredient_id": 4, "proportion": 0.25},
+                {"ingredient_id": 14, "proportion": 0.02},
+                {"ingredient_id": 12, "proportion": 0.18},
+            ],
+        })
+        blend_id = resp.json()["id"]
+
+        resp = client.post("/simulate/cooking", json={
+            "blend_id": blend_id,
+            "water_temp_c": 98,
+            "cooking_time_min": 6,
+            "pasta_thickness_mm": 2,
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["water_uptake_pct"] > 0
+        assert data["cooking_loss_pct"] > 0
+        assert 0 <= data["firmness_index"] <= 1
+        assert 0 <= data["stickiness_index"] <= 1
+        assert 0 <= data["quality_score"] <= 1
+
+    def test_simulate_cooking_not_found(self):
+        resp = client.post("/simulate/cooking", json={"blend_id": 999})
+        assert resp.status_code == 404
+
 
 class TestPrediction:
     def test_untrained(self):
@@ -242,6 +272,30 @@ class TestOptimizeSuggest:
         })
         assert resp.status_code == 200
         assert resp.json()["candidates"] == []
+
+    def test_application_suggest_pasta_uses_cooking(self):
+        resp = client.post("/optimize/application-suggest", json={
+            "application_id": 5,
+            "ingredients": [
+                {"ingredient_id": 1, "min_proportion": 0.30, "max_proportion": 0.70},
+                {"ingredient_id": 4, "min_proportion": 0.10, "max_proportion": 0.50},
+                {"ingredient_id": 14, "min_proportion": 0.005, "max_proportion": 0.025},
+            ],
+            "n_candidates": 2,
+            "n_blend_samples": 10,
+            "n_process_samples": 5,
+            "seed": 99,
+            "baking_temp": {"min": 92, "max": 100},
+            "baking_duration": {"min": 4, "max": 12},
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["application"] == "Pasta fresca"
+        assert len(data["candidates"]) == 2
+        candidate = data["candidates"][0]
+        assert "water_temp_c" in candidate["process"]
+        assert candidate["cooking_metrics"] is not None
+        assert candidate["cooking_metrics"]["cooking_loss_pct"] > 0
 
 
 class TestExperiments:

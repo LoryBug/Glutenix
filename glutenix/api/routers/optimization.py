@@ -9,6 +9,7 @@ from glutenix.bo.explain import ard_feature_importance
 from glutenix.db.models import Application, Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
+from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
 from glutenix.engine.flavor import (
     APPLICATION_FLAVOR_TARGETS,
     DEFAULT_FLAVOR_TARGET,
@@ -157,6 +158,7 @@ class ApplicationBlendCandidate(BaseModel):
     process: dict[str, float]
     properties: dict[str, float]
     flavor_profile: dict[str, float]
+    cooking_metrics: dict[str, float] | None = None
     volume_increase_pct: float
     core_temp_c: float
     crust_temp_c: float
@@ -237,6 +239,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
     rng = random.Random(body.seed)
     profile = get_sweep_target_profile(application.name)
     flavor_target = get_flavor_target(application.name)
+    is_pasta = application.name.strip().lower() == "pasta fresca"
     weight_sum = body.w_process + body.w_blend + body.w_flavor
     if weight_sum <= 0:
         raise HTTPException(400, detail="At least one score weight must be positive")
@@ -245,11 +248,18 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
     w_flavor = body.w_flavor / weight_sum
     calc = BlendCalculator()
     sweeper = SimulationSweeper()
+    baking_temp_range = body.baking_temp
+    baking_duration_range = body.baking_duration
+    if is_pasta and body.baking_temp.max > 120:
+        baking_temp_range = ProcessRange(min=90, max=100)
+    if is_pasta and body.baking_duration.max > 30:
+        baking_duration_range = ProcessRange(min=4, max=14)
+
     process_points = sweeper.generate_random(
         SweepRange(body.fermentation_temp.min, body.fermentation_temp.max),
         SweepRange(body.fermentation_duration.min, body.fermentation_duration.max),
-        SweepRange(body.baking_temp.min, body.baking_temp.max),
-        SweepRange(body.baking_duration.min, body.baking_duration.max),
+        SweepRange(baking_temp_range.min, baking_temp_range.max),
+        SweepRange(baking_duration_range.min, baking_duration_range.max),
         n_samples=body.n_process_samples,
         seed=body.seed,
     )
@@ -264,20 +274,63 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
 
         blend_data = [(ing, prop) for (ing, _, _), prop in zip(items, proportions)]
         blend_props = calc.calculate(blend_data)
-        sweep = sweeper.run_sweep(
-            blend_props,
-            process_points,
-            top_n=1,
-            target_profile=profile,
-        )
-        if not sweep.points:
-            continue
+
+        cooking_metrics = None
+        if is_pasta:
+            best_cooking = None
+            best_point = None
+            for point in process_points:
+                cooking = PastaCookingSimulator(
+                    PastaCookingParams(
+                        water_temp_c=point["baking_temp_c"],
+                        cooking_time_min=point["baking_duration_min"],
+                    )
+                ).simulate(blend_props)
+                if best_cooking is None or cooking.quality_score > best_cooking.quality_score:
+                    best_cooking = cooking
+                    best_point = point
+            if best_cooking is None or best_point is None:
+                continue
+            process_score = best_cooking.quality_score
+            process_data = {
+                "water_temp_c": best_point["baking_temp_c"],
+                "cooking_time_min": best_point["baking_duration_min"],
+                "pasta_thickness_mm": 2.0,
+            }
+            cooking_metrics = {
+                "water_uptake_pct": best_cooking.water_uptake_pct,
+                "cooking_loss_pct": best_cooking.cooking_loss_pct,
+                "firmness_index": best_cooking.firmness_index,
+                "stickiness_index": best_cooking.stickiness_index,
+                "quality_score": best_cooking.quality_score,
+            }
+            volume_pct = 0.0
+            core_temp = best_cooking.core_temp_c
+            crust_temp = best_point["baking_temp_c"]
+        else:
+            sweep = sweeper.run_sweep(
+                blend_props,
+                process_points,
+                top_n=1,
+                target_profile=profile,
+            )
+            if not sweep.points:
+                continue
+            best_process = sweep.points[0]
+            process_score = best_process.composite_score
+            process_data = {
+                "fermentation_temp_c": best_process.fermentation_temp_c,
+                "fermentation_duration_min": best_process.fermentation_duration_min,
+                "baking_temp_c": best_process.baking_temp_c,
+                "baking_duration_min": best_process.baking_duration_min,
+            }
+            volume_pct = round(best_process.volume_increase * 100, 2)
+            core_temp = best_process.core_temp_c
+            crust_temp = best_process.crust_temp_c
 
         blend_score = score_blend_against_profile(_blend_values(blend_props), profile)
         flavor_profile = calculate_blend_flavor(blend_data)
         flavor_score = score_flavor_against_target(flavor_profile, flavor_target)
-        best_process = sweep.points[0]
-        process_score = best_process.composite_score
         total_score = w_process * process_score + w_blend * blend_score + w_flavor * flavor_score
 
         candidates.append((
@@ -288,7 +341,11 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             proportions,
             blend_props,
             flavor_profile,
-            best_process,
+            process_data,
+            volume_pct,
+            core_temp,
+            crust_temp,
+            cooking_metrics,
         ))
 
     candidates.sort(key=lambda c: c[0], reverse=True)
@@ -308,17 +365,13 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                     ing.name: round(prop, 4)
                     for (ing, _, _), prop in zip(items, proportions)
                 },
-                process={
-                    "fermentation_temp_c": best.fermentation_temp_c,
-                    "fermentation_duration_min": best.fermentation_duration_min,
-                    "baking_temp_c": best.baking_temp_c,
-                    "baking_duration_min": best.baking_duration_min,
-                },
+                process=process_data,
                 properties={key: round(value, 4) for key, value in _blend_values(blend_props).items()},
                 flavor_profile=flavor_profile,
-                volume_increase_pct=round(best.volume_increase * 100, 2),
-                core_temp_c=best.core_temp_c,
-                crust_temp_c=best.crust_temp_c,
+                cooking_metrics=cooking_metrics,
+                volume_increase_pct=volume_pct,
+                core_temp_c=core_temp,
+                crust_temp_c=crust_temp,
             )
             for rank, (
                 total_score,
@@ -328,7 +381,11 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 proportions,
                 blend_props,
                 flavor_profile,
-                best,
+                process_data,
+                volume_pct,
+                core_temp,
+                crust_temp,
+                cooking_metrics,
             )
             in enumerate(candidates[:body.n_candidates], start=1)
         ],
