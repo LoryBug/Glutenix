@@ -131,6 +131,10 @@ class CookingResponse(BaseModel):
     pregelatinization_index: float
     syneresis_index: float
     starch_leaching_index: float
+    process_family: str
+    calibration_confidence: str
+    calibration_score: float
+    calibration_notes: list[str]
 
 
 @router.post("/cooking", response_model=CookingResponse)
@@ -179,6 +183,10 @@ def simulate_cooking(body: CookingRequest, db: Session = Depends(get_db)):
         pregelatinization_index=result.pregelatinization_index,
         syneresis_index=result.syneresis_index,
         starch_leaching_index=result.starch_leaching_index,
+        process_family=result.process_family,
+        calibration_confidence=result.calibration_confidence,
+        calibration_score=result.calibration_score,
+        calibration_notes=result.calibration_notes,
     )
 
 

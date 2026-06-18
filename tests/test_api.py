@@ -170,6 +170,10 @@ class TestSimulation:
         assert data["pregelatinization_index"] > 0
         assert data["syneresis_index"] >= 0
         assert data["starch_leaching_index"] >= 0
+        assert data["process_family"] == "generic_fresh"
+        assert data["calibration_confidence"] == "low"
+        assert 0 <= data["calibration_score"] <= 1
+        assert data["calibration_notes"]
 
     def test_simulate_cooking_not_found(self):
         resp = client.post("/simulate/cooking", json={"blend_id": 999})
@@ -325,6 +329,7 @@ class TestOptimizeSuggest:
         assert "water_temp_c" in candidate["process"]
         assert candidate["cooking_metrics"] is not None
         assert candidate["cooking_metrics"]["cooking_loss_pct"] > 0
+        assert "calibration_confidence" in candidate["cooking_metrics"]
 
 
 class TestExperiments:

@@ -251,6 +251,10 @@ class TestPastaCookingSimulator:
         assert 0 <= result.pregelatinization_index <= 1.0
         assert 0 <= result.syneresis_index <= 1.4
         assert 0 <= result.starch_leaching_index <= 1.4
+        assert result.process_family == "generic_fresh"
+        assert result.calibration_confidence == "low"
+        assert 0 <= result.calibration_score <= 1
+        assert result.calibration_notes
 
     def test_overcooking_increases_loss(self):
         props = BlendProperties(
@@ -315,6 +319,8 @@ class TestPastaCookingSimulator:
 
         assert calcium.gelation_index > no_calcium.gelation_index
         assert calcium.cooking_loss_pct < no_calcium.cooking_loss_pct
+        assert calcium.process_family == "fresh_calcium_gel"
+        assert calcium.calibration_confidence == "high"
 
     def test_pregelatinization_reduces_starch_leaching(self):
         props = BlendProperties(
@@ -423,6 +429,8 @@ class TestPastaCookingSimulator:
         assert kgm_result.water_uptake_pct > rf_result.water_uptake_pct
         assert kgm_result.cooking_loss_pct > rf_result.cooking_loss_pct
         assert curdlan_result.cooking_loss_pct < kgm_result.cooking_loss_pct
+        assert kgm_result.process_family == "dried_extruded"
+        assert kgm_result.calibration_confidence == "medium"
 
     def test_rejects_invalid_params(self):
         import pytest

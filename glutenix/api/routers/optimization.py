@@ -1,4 +1,5 @@
 import random
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -158,7 +159,7 @@ class ApplicationBlendCandidate(BaseModel):
     process: dict[str, float]
     properties: dict[str, float]
     flavor_profile: dict[str, float]
-    cooking_metrics: dict[str, float] | None = None
+    cooking_metrics: dict[str, Any] | None = None
     volume_increase_pct: float
     core_temp_c: float
     crust_temp_c: float
@@ -310,6 +311,10 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 "pregelatinization_index": best_cooking.pregelatinization_index,
                 "syneresis_index": best_cooking.syneresis_index,
                 "starch_leaching_index": best_cooking.starch_leaching_index,
+                "process_family": best_cooking.process_family,
+                "calibration_confidence": best_cooking.calibration_confidence,
+                "calibration_score": best_cooking.calibration_score,
+                "calibration_notes": best_cooking.calibration_notes,
             }
             volume_pct = 0.0
             core_temp = best_cooking.core_temp_c

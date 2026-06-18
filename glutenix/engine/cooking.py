@@ -33,6 +33,10 @@ class PastaCookingResult:
     pregelatinization_index: float
     syneresis_index: float
     starch_leaching_index: float
+    process_family: str
+    calibration_confidence: str
+    calibration_score: float
+    calibration_notes: list[str]
 
 
 class PastaCookingSimulator:
@@ -83,6 +87,7 @@ class PastaCookingSimulator:
         curdlan = self._ingredient_fraction(blend_props, "curdlan")
         soy_protein = self._ingredient_fraction(blend_props, "soy protein")
         waxy_rice = self._ingredient_fraction(blend_props, "sweet rice") + self._ingredient_fraction(blend_props, "waxy")
+        high_amylose_rice = self._ingredient_fraction(blend_props, "high-amylose rice")
         protein = blend_props.protein_pct
         amylose = blend_props.amylose_pct
         water_absorption = blend_props.water_absorption
@@ -191,6 +196,40 @@ class PastaCookingSimulator:
                 260.0,
             ))
 
+        process_family = "dried_extruded" if p.dried_pasta else "generic_fresh"
+        calibration_score = 0.25
+        notes: list[str] = []
+        if p.dried_pasta:
+            rice_like = high_amylose_rice + waxy_rice >= 0.75
+            studied_additive = kgm > 0.0 or curdlan > 0.0 or soy_protein > 0.0 or waxy_rice > 0.0
+            if rice_like and studied_additive and p.extrusion_moisture_pct is not None:
+                calibration_score = 0.75
+                notes.append("Covered by dried-extruded rice pasta literature with KGM/curdlan or SPI.")
+            elif rice_like:
+                calibration_score = 0.5
+                notes.append("Rice-based dried pasta is partially covered, but additives/process differ from current literature.")
+            else:
+                notes.append("Dried pasta composition is outside the current rice-pasta calibration set.")
+        elif alginate > 0.0 and p.calcium_lactate_m > 0 and p.calcium_bath_time_min > 0:
+            process_family = "fresh_calcium_gel"
+            ratio_covered = water_to_flour is not None and 2.0 <= water_to_flour <= 10.0
+            alginate_covered = 0.008 <= alginate <= 0.018
+            if ratio_covered and alginate_covered:
+                calibration_score = 0.85
+                notes.append("Covered by calcium-alginate fresh pasta literature.")
+            else:
+                calibration_score = 0.55
+                notes.append("Calcium-alginate mechanism is covered, but ratio or alginate level is extrapolated.")
+        else:
+            notes.append("Generic fresh pasta mode has no direct literature calibration yet.")
+
+        if calibration_score >= 0.8:
+            calibration_confidence = "high"
+        elif calibration_score >= 0.5:
+            calibration_confidence = "medium"
+        else:
+            calibration_confidence = "low"
+
         optimal_time = 5.5 * thickness_factor / temp_factor
         undercook = max(0.0, (optimal_time - p.cooking_time_min) / optimal_time)
         overcook = max(0.0, (p.cooking_time_min - optimal_time) / optimal_time)
@@ -298,4 +337,8 @@ class PastaCookingSimulator:
             pregelatinization_index=round(pregelatinization, 4),
             syneresis_index=round(syneresis, 4),
             starch_leaching_index=round(starch_leaching, 4),
+            process_family=process_family,
+            calibration_confidence=calibration_confidence,
+            calibration_score=round(calibration_score, 4),
+            calibration_notes=notes,
         )
