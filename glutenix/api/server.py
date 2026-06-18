@@ -8,6 +8,7 @@ from glutenix.api.middleware import TracingMiddleware
 from glutenix.api.routers import (
     applications,
     blends,
+    calibration,
     experiments,
     ingredients,
     optimization,
@@ -46,6 +47,7 @@ app.include_router(simulation.router)
 app.include_router(prediction.router)
 app.include_router(optimization.router)
 app.include_router(experiments.router)
+app.include_router(calibration.router)
 
 
 @app.get("/health")

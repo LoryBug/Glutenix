@@ -184,6 +184,18 @@ class TestARD:
         assert len(data["importance"]) == 9
 
 
+class TestCalibration:
+    def test_pasta_cooking_calibration(self):
+        resp = client.get("/calibration/pasta-cooking")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["n_records"] == 9
+        assert data["metric"] == "cooking_loss_pct"
+        assert "before" in data
+        assert "after" in data
+        assert len(data["rows"]) == 9
+
+
 class TestUpdateIngredient:
     def test_update(self):
         resp = client.put("/ingredients/1", json={
