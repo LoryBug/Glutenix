@@ -140,6 +140,7 @@ It combines:
 - Blend-property score.
 - Flavor score.
 - Pasta cooking metrics when the target is fresh pasta.
+- Model confidence metadata that explains support level and risk flags.
 
 The goal is not to output a magic recipe. The goal is to produce a ranked shortlist of candidates worth testing.
 

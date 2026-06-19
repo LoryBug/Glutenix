@@ -275,6 +275,10 @@ class TestOptimizeSuggest:
         assert "fermentation_temp_c" in candidate["process"]
         assert "water_absorption" in candidate["properties"]
         assert "neutral" in candidate["flavor_profile"]
+        assert 0 <= candidate["model_confidence"]["score"] <= 1
+        assert candidate["model_confidence"]["level"] in {"low", "medium", "high"}
+        assert candidate["model_confidence"]["basis"]
+        assert candidate["model_confidence"]["risk_flags"]
 
     def test_flavor_targets(self):
         resp = client.get("/optimize/flavor-targets")
@@ -330,6 +334,8 @@ class TestOptimizeSuggest:
         assert candidate["cooking_metrics"] is not None
         assert candidate["cooking_metrics"]["cooking_loss_pct"] > 0
         assert "calibration_confidence" in candidate["cooking_metrics"]
+        assert 0 <= candidate["model_confidence"]["score"] <= 1
+        assert candidate["model_confidence"]["level"] in {"low", "medium", "high"}
 
 
 class TestExperiments:

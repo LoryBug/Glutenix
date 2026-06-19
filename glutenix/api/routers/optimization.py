@@ -10,6 +10,10 @@ from glutenix.bo.explain import ard_feature_importance
 from glutenix.db.models import Application, Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
+from glutenix.engine.confidence import (
+    assess_candidate_confidence,
+    serialize_candidate_confidence,
+)
 from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
 from glutenix.engine.flavor import (
     APPLICATION_FLAVOR_TARGETS,
@@ -149,6 +153,13 @@ class ApplicationSuggestRequest(BaseModel):
     w_flavor: float = Field(default=0.20, ge=0, le=1)
 
 
+class CandidateConfidenceResponse(BaseModel):
+    score: float
+    level: str
+    basis: list[str]
+    risk_flags: list[str]
+
+
 class ApplicationBlendCandidate(BaseModel):
     rank: int
     score: float
@@ -160,6 +171,7 @@ class ApplicationBlendCandidate(BaseModel):
     properties: dict[str, float]
     flavor_profile: dict[str, float]
     cooking_metrics: dict[str, Any] | None = None
+    model_confidence: CandidateConfidenceResponse
     volume_increase_pct: float
     core_temp_c: float
     crust_temp_c: float
@@ -344,6 +356,15 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
         flavor_profile = calculate_blend_flavor(blend_data)
         flavor_score = score_flavor_against_target(flavor_profile, flavor_target)
         total_score = w_process * process_score + w_blend * blend_score + w_flavor * flavor_score
+        blend_values = _blend_values(blend_props)
+        model_confidence = serialize_candidate_confidence(assess_candidate_confidence(
+            blend_values=blend_values,
+            profile=profile,
+            process_score=process_score,
+            blend_score=blend_score,
+            flavor_score=flavor_score,
+            cooking_metrics=cooking_metrics,
+        ))
 
         candidates.append((
             total_score,
@@ -358,6 +379,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             core_temp,
             crust_temp,
             cooking_metrics,
+            model_confidence,
         ))
 
     candidates.sort(key=lambda c: c[0], reverse=True)
@@ -381,6 +403,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 properties={key: round(value, 4) for key, value in _blend_values(blend_props).items()},
                 flavor_profile=flavor_profile,
                 cooking_metrics=cooking_metrics,
+                model_confidence=model_confidence,
                 volume_increase_pct=volume_pct,
                 core_temp_c=core_temp,
                 crust_temp_c=crust_temp,
@@ -398,6 +421,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 core_temp,
                 crust_temp,
                 cooking_metrics,
+                model_confidence,
             )
             in enumerate(candidates[:body.n_candidates], start=1)
         ],
