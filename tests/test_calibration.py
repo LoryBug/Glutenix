@@ -4,6 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from glutenix.calibration.literature import (
+    DEFAULT_BREAD_DATASET,
+    compare_bread_baking_records,
     compare_pasta_cooking_records,
     load_literature_records,
     pasta_calibration_report_markdown,
@@ -40,6 +42,19 @@ class TestLiteratureCalibration:
         assert "cooking_loss_pct" in summary["metrics"]
         assert "swelling_index" in summary["metrics"]
 
+    def test_validate_bread_literature_dataset_summary(self):
+        summary = validate_literature_dataset(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=("specific_volume_cm3_g",),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
+
+        assert summary["record_count"] == 15
+        assert summary["applications"] == ["Pane"]
+        assert summary["source_count"] == 3
+        assert "specific_volume_cm3_g" in summary["metrics"]
+        assert "crumb_hardness_n" in summary["metrics"]
+
     def test_compare_pasta_cooking_records(self):
         session = _seeded_session()
         try:
@@ -73,6 +88,26 @@ class TestLiteratureCalibration:
         assert result["rows"][0]["process_family"] == "fresh_calcium_gel"
         assert result["rows"][0]["gelation_index"] > 0
         assert result["rows"][0]["pregelatinization_index"] > 0
+
+    def test_compare_bread_baking_records(self):
+        session = _seeded_session()
+        try:
+            result = compare_bread_baking_records(session)
+        finally:
+            session.close()
+
+        assert result["n_records"] == 15
+        assert result["source_count"] == 3
+        assert result["metric"] == "specific_volume_cm3_g"
+        assert "specific_volume_cm3_g" in result["metric_summaries"]
+        assert "crumb_hardness_n" in result["metric_summaries"]
+        assert result["record_groups"]["process_family"] == {
+            "commercial_mix_bread": 4,
+            "millet_cultivar_bread": 9,
+            "protein_enriched_bread": 2,
+        }
+        assert len(result["rows"]) == 15
+        assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
 
     def test_report_markdown(self):
         session = _seeded_session()

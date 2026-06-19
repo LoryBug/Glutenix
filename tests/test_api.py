@@ -58,7 +58,7 @@ class TestIngredients:
         resp = client.get("/ingredients")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 23
+        assert len(data) == 26
 
     def test_get_found(self):
         resp = client.get("/ingredients/1")
@@ -215,6 +215,17 @@ class TestCalibration:
         assert data["record_groups"]["process_family"]["fresh_calcium_gel"] == 30
         assert data["record_groups"]["process_family"]["dried_extruded"] == 10
         assert len(data["rows"]) == 40
+
+    def test_bread_baking_calibration(self):
+        resp = client.get("/calibration/bread-baking")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["n_records"] == 15
+        assert data["source_count"] == 3
+        assert data["metric"] == "specific_volume_cm3_g"
+        assert "specific_volume_cm3_g" in data["metric_summaries"]
+        assert data["record_groups"]["process_family"]["millet_cultivar_bread"] == 9
+        assert len(data["rows"]) == 15
 
 
 class TestUpdateIngredient:

@@ -20,7 +20,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | Domain | Current Evidence | Records | Sources | Main Metrics | Current Confidence | Next Priority |
 |---|---:|---:|---:|---|---|---|
 | Pasta cooking | `calibrated` | 40 | 3 | Cooking loss, water uptake, swelling | Medium-high | Add more dried/fresh pasta systems and texture data |
-| Bread baking | `heuristic` | 0 | 0 | Volume proxy, bake fit, blend targets | Low | Add bread baking dataset |
+| Bread baking | `literature-informed` | 15 | 3 | Specific volume, limited crumb hardness | Medium-low | Add more hydrocolloid/protein/fiber bread records |
 | Pizza baking | `heuristic` | 0 | 0 | Process fit, crust/core targets, blend targets | Low | Add pizza or flatbread dataset after bread |
 | Sweet leavened doughs | `heuristic` | 0 | 0 | Volume/process/blend targets | Low | Extract enriched dough literature later |
 | Shortcrust/frolla | `heuristic` | 0 | 0 | Low-volume process fit, fat/starch balance | Low | Add biscuit/shortcrust texture papers later |
@@ -34,7 +34,8 @@ The evidence map is intentionally conservative. A model can be useful before it 
 |---|---|---|---|
 | `BlendCalculator` | `literature-informed` | Ingredient composition and approximate functional properties | Ingredient provenance and variance ranges are not fully tracked |
 | `FermentationSimulator` | `heuristic` | Mechanistic proxy for gas/volume behavior | No direct validation against gluten-free dough fermentation data |
-| `BakingSimulator` | `heuristic` | Heat-transfer and gelatinization-inspired proxy | No measured bread/pizza baking dataset yet |
+| `BakingSimulator` | `literature-informed` | Heat-transfer and gelatinization-inspired proxy plus first bread comparison dataset | Needs broader bread/pizza baking validation |
+| `BreadQualitySimulator` | `literature-informed` | 15 bread records from 3 papers, focused on specific volume | Early diagnostic model; hardness has only two records |
 | `PastaCookingSimulator` | `calibrated` | 40 records from 3 pasta papers | Limited texture validation and only 3 sources |
 | `FlavorModel` | `heuristic` | Literature-informed sensory proxy | No measured sensory panel calibration |
 | `ApplicationSuggest` | `heuristic + confidence` | Target profiles, process scores, flavor score, pasta calibration where available | Needs domain calibration beyond pasta |
@@ -107,7 +108,7 @@ Next literature targets:
 
 ### Pane
 
-Current status: `heuristic`.
+Current status: `literature-informed` with early diagnostic comparison.
 
 Current model support:
 
@@ -115,14 +116,29 @@ Current model support:
 - Process sweep can optimize fermentation and baking settings.
 - Blend score uses water absorption, viscosity, hydrocolloid fraction, fiber, and protein ranges.
 - Baking simulator estimates core/crust temperature and gelatinization-inspired heat behavior.
+- Bread quality simulator estimates specific volume, crumb hardness proxy, moisture retention, staling risk, and structure index.
 
-Current missing evidence:
+Structured records:
 
-- No structured `bread_baking.jsonl` dataset.
-- No direct comparison to specific volume.
-- No direct comparison to crumb hardness/firmness.
-- No direct comparison to moisture retention or staling.
-- No direct comparison by hydrocolloid type.
+- 15 total records.
+- 3 peer-reviewed sources.
+- 9 proso millet cultivar bread records.
+- 4 commercial gluten-free bread mix additive-removal records.
+- 2 rice/chickpea/whey protein bread records.
+
+Current sources:
+
+- Singh and Adedeji 2026, DOI `10.3390/foods15101711`, proso millet cultivar gluten-free breads.
+- Torres-Perez et al. 2026, DOI `10.3390/foods15020338`, additive-removal clean-label gluten-free bread.
+- Loncaric et al. 2026, DOI `10.3390/foods15030412`, rice/whey and rice/chickpea gluten-free bread staling.
+
+Current limitations:
+
+- Specific volume is the only broadly covered metric.
+- Crumb hardness has only two structured records so far.
+- Commercial bread mix records are aggregate-mapped because internal proportions are not disclosed.
+- Millet cultivar records share a generic `Millet flour` mapping, so cultivar-specific starch functionality is simplified.
+- No independent train/test split is meaningful yet.
 
 Priority metrics to extract:
 
@@ -146,11 +162,15 @@ Priority ingredient/process families:
 - Fiber-enriched bread.
 - Sourdough or yeast fermentation with clear process data.
 
-Recommended next action:
+Implemented first action:
 
-- Extract 2-3 bread papers with table-based numeric metrics and complete formulas.
 - Build `data/literature/bread_baking.jsonl`.
 - Add a diagnostic `GET /calibration/bread-baking` endpoint.
+
+Recommended next action:
+
+- Add 2-3 more bread papers focused on HPMC/xanthan/psyllium levels with specific volume and hardness tables.
+- Add source-specific ingredient/property notes for millet cultivars if cultivar composition data is extractable.
 
 ### Pizza
 
@@ -270,9 +290,9 @@ Recommended next action:
 | Cooking loss | Structured | Not applicable | Not applicable | Not applicable | Not applicable |
 | Water uptake | Structured, scale-dependent | Missing | Missing | Missing | Missing |
 | Swelling | Structured for Lux | Missing | Missing | Missing | Missing |
-| Specific volume | Not applicable | Missing | Missing | Missing | Usually not primary |
+| Specific volume | Not applicable | Structured | Missing | Missing | Usually not primary |
 | Core/crust process fit | Not primary | Heuristic | Heuristic | Heuristic | Heuristic |
-| Firmness/hardness | Modeled proxy, not validated | Missing | Missing | Missing | Missing |
+| Firmness/hardness | Modeled proxy, not validated | Limited structured | Missing | Missing | Missing |
 | Stickiness/gumminess | Modeled proxy, not validated | Missing | Missing | Missing | Missing |
 | Moisture retention | Not validated | Missing | Missing | Missing | Missing |
 | Sensory score | Not validated | Missing | Missing | Missing | Missing |
@@ -301,7 +321,7 @@ Recommended next action:
 | Fresh calcium-gel pasta | Medium-high | 30 records from Lux 2023 |
 | Dried extruded rice pasta | Medium | 10 records from Liu 2026 and Detchewa 2016 |
 | Generic fresh pasta | Low | Heuristic fallback only |
-| Yeast-fermented bread | Low | Simulated but not literature-calibrated |
+| Yeast-fermented bread | Medium-low | 15 initial bread records, mostly specific volume |
 | High-temperature pizza baking | Low | Simulated but not literature-calibrated |
 | Sweet enriched leavened dough | Low | Simulated but not literature-calibrated |
 | Shortcrust/biscuit baking | Low | Simulated but not literature-calibrated |
@@ -347,16 +367,14 @@ Desired properties:
 
 ## Next Implementation Tasks
 
-1. Add `data/literature/bread_baking.jsonl` with 2-3 high-quality papers.
-2. Generalize literature loading helpers so bread and pasta share validation logic where possible.
-3. Add bread calibration comparison for specific volume and firmness.
-4. Add `GET /calibration/bread-baking`.
-5. Add `docs/bread-baking-calibration-report.md`.
-6. Derive ingredient/process coverage ranges from literature records.
-7. Feed those ranges into `model_confidence` as OOD warnings.
+1. Add 2-3 more bread papers with explicit hydrocolloid-level variation.
+2. Add `docs/bread-baking-calibration-report.md`.
+3. Derive ingredient/process coverage ranges from literature records.
+4. Feed those ranges into `model_confidence` as OOD warnings.
+5. Add pizza/flatbread literature after bread coverage is broader.
 
 ## Current Summary
 
-Glutenix is currently strongest for pasta cooking and weakest for baked-product validation.
+Glutenix is currently strongest for pasta cooking and now has an initial, diagnostic bread validation dataset.
 
-The most important next move is not more frontend work and not more coefficient tuning. The most important next move is structured bread literature extraction, because it validates the core baking/fermentation path and makes the project broader than pasta.
+The most important next move is not more frontend work and not more coefficient tuning. The most important next move is broader structured bread literature extraction, especially papers that isolate HPMC, xanthan, psyllium, protein, and fiber effects with numeric volume and texture tables.

@@ -8,12 +8,15 @@ import numpy as np
 from sqlalchemy.orm import Session
 
 from glutenix.db.models import Ingredient
+from glutenix.engine.bread import BreadQualityParams, BreadQualitySimulator
 from glutenix.engine.blend import BlendCalculator
 from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PASTA_DATASET = PROJECT_ROOT / "data" / "literature" / "pasta_cooking.jsonl"
+DEFAULT_BREAD_DATASET = PROJECT_ROOT / "data" / "literature" / "bread_baking.jsonl"
 VALID_CONFIDENCE_LEVELS = {"low", "medium", "high"}
+ALLOW_NEGATIVE_MEASURED_METRICS = {"water_absorption_pct"}
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,29 @@ class PastaCalibrationRow:
     starch_leaching_index: float
 
 
-def load_literature_records(path: Path | str = DEFAULT_PASTA_DATASET) -> list[LiteratureRecord]:
+@dataclass(frozen=True)
+class BreadCalibrationRow:
+    id: str
+    measured_specific_volume_cm3_g: float | None
+    simulated_specific_volume_cm3_g: float | None
+    measured_crumb_hardness_n: float | None
+    simulated_crumb_hardness_n: float | None
+    process_family: str
+    formula: dict[str, float]
+    source_doi: str | None
+    source_label: str
+    calibration_confidence: str
+    calibration_score: float
+    structure_index: float
+    staling_risk: float
+
+
+def load_literature_records(
+    path: Path | str = DEFAULT_PASTA_DATASET,
+    *,
+    required_measured_metrics: tuple[str, ...] = ("cooking_loss_pct",),
+    required_process_fields: tuple[str, ...] = ("cooking_time_min",),
+) -> list[LiteratureRecord]:
     records = []
     with Path(path).open("r", encoding="utf-8") as f:
         for line_no, line in enumerate(f, start=1):
@@ -62,12 +87,23 @@ def load_literature_records(path: Path | str = DEFAULT_PASTA_DATASET) -> list[Li
                 continue
             raw = json.loads(line)
             record = LiteratureRecord(**raw)
-            validate_literature_record(record, line_no=line_no)
+            validate_literature_record(
+                record,
+                line_no=line_no,
+                required_measured_metrics=required_measured_metrics,
+                required_process_fields=required_process_fields,
+            )
             records.append(record)
     return records
 
 
-def validate_literature_record(record: LiteratureRecord, line_no: int | None = None) -> None:
+def validate_literature_record(
+    record: LiteratureRecord,
+    line_no: int | None = None,
+    *,
+    required_measured_metrics: tuple[str, ...] = ("cooking_loss_pct",),
+    required_process_fields: tuple[str, ...] = ("cooking_time_min",),
+) -> None:
     where = f" at line {line_no}" if line_no is not None else ""
     if not record.id:
         raise ValueError(f"Record id is required{where}")
@@ -94,17 +130,19 @@ def validate_literature_record(record: LiteratureRecord, line_no: int | None = N
                 raise ValueError(f"{field_name} ingredient names must be non-empty{where}")
             if not np.isfinite(value) or value <= 0:
                 raise ValueError(f"{field_name}.{name} must be a positive finite value{where}")
-    if "cooking_loss_pct" not in record.measured:
-        raise ValueError(f"measured.cooking_loss_pct is required{where}")
+    for metric in required_measured_metrics:
+        if metric not in record.measured:
+            raise ValueError(f"measured.{metric} is required{where}")
     for name, value in record.measured.items():
         if not np.isfinite(value):
             raise ValueError(f"measured.{name} must be finite{where}")
-    if record.measured["cooking_loss_pct"] < 0:
-        raise ValueError(f"measured.cooking_loss_pct must be non-negative{where}")
-    if "cooking_time_min" not in record.process:
-        raise ValueError(f"process.cooking_time_min is required{where}")
-    if float(record.process["cooking_time_min"]) <= 0:
-        raise ValueError(f"process.cooking_time_min must be positive{where}")
+        if value < 0 and name not in ALLOW_NEGATIVE_MEASURED_METRICS:
+            raise ValueError(f"measured.{name} must be non-negative{where}")
+    for field in required_process_fields:
+        if field not in record.process:
+            raise ValueError(f"process.{field} is required{where}")
+        if isinstance(record.process[field], int | float) and float(record.process[field]) <= 0:
+            raise ValueError(f"process.{field} must be positive{where}")
     if "water_temp_c" in record.process and float(record.process["water_temp_c"]) <= 0:
         raise ValueError(f"process.water_temp_c must be positive{where}")
     total = sum(record.mapped_formula.values())
@@ -112,8 +150,17 @@ def validate_literature_record(record: LiteratureRecord, line_no: int | None = N
         raise ValueError(f"mapped_formula must sum to 1.0, got {total}{where}")
 
 
-def validate_literature_dataset(path: Path | str = DEFAULT_PASTA_DATASET) -> dict[str, Any]:
-    records = load_literature_records(path)
+def validate_literature_dataset(
+    path: Path | str = DEFAULT_PASTA_DATASET,
+    *,
+    required_measured_metrics: tuple[str, ...] = ("cooking_loss_pct",),
+    required_process_fields: tuple[str, ...] = ("cooking_time_min",),
+) -> dict[str, Any]:
+    records = load_literature_records(
+        path,
+        required_measured_metrics=required_measured_metrics,
+        required_process_fields=required_process_fields,
+    )
     metrics = sorted({metric for record in records for metric in record.measured})
     applications = sorted({record.application for record in records})
     sources = sorted({record.source.get("doi") or record.source.get("pmcid") or record.source.get("url") for record in records})
@@ -331,11 +378,154 @@ def compare_pasta_cooking_records(
         },
         "rows": [row.__dict__ for row in rows],
         "limitations": [
-            "Dataset currently contains cooking-loss rows from two papers.",
-            "Lux et al. uses calcium-mediated alginate gelation; the simulator now has a simplified gelation term, not a validated gel-network model.",
-            "Liu et al. uses dried twin-screw extruded rice pasta; the simulator now has a simplified dried-extruded branch, not a general extrusion model.",
-            "Amaranth flour parameters are approximate literature averages.",
+            "Dataset currently contains cooking-loss rows from three papers.",
+            "Lux et al. uses calcium-mediated alginate gelation; the simulator has a simplified gelation term, not a validated gel-network model.",
+            "Liu and Detchewa use dried twin-screw extruded rice pasta; the simulator has a simplified dried-extruded branch, not a general extrusion model.",
+            "Ingredient parameters are approximate literature averages.",
             "Linear correction is diagnostic; do not treat as calibrated production model yet.",
+        ],
+    }
+
+
+def _record_bread_params(record: LiteratureRecord) -> BreadQualityParams:
+    return BreadQualityParams(
+        hydration_pct=float(record.process.get("hydration_pct", 100.0)),
+        fermentation_temp_c=float(record.process.get("fermentation_temp_c", 30.0)),
+        fermentation_time_min=float(record.process.get("fermentation_time_min", 60.0)),
+        baking_temp_c=float(record.process.get("baking_temp_c", 190.0)),
+        baking_time_min=float(record.process.get("baking_time_min", 40.0)),
+        dough_thickness_cm=float(record.process.get("dough_thickness_cm", 5.0)),
+        yeast_pct=float(record.process.get("yeast_pct", 3.0)),
+        sugar_pct=float(record.process.get("sugar_pct", 3.0)),
+        fat_pct=float(record.process.get("fat_pct", 0.0)),
+        chemical_leavening_pct=float(record.process.get("chemical_leavening_pct", 0.0)),
+        emulsifier_pct=float(record.process.get("emulsifier_pct", 0.0)),
+        storage_days=float(record.process.get("storage_days", 1.0)),
+    )
+
+
+def _bread_process_family(record: LiteratureRecord) -> str:
+    formula_names = " ".join(record.mapped_formula).lower()
+    if "commercial gluten-free bread mix" in formula_names:
+        return "commercial_mix_bread"
+    if "millet" in formula_names:
+        return "millet_cultivar_bread"
+    if "chickpea" in formula_names or "whey" in formula_names:
+        return "protein_enriched_bread"
+    return "generic_gluten_free_bread"
+
+
+def _group_metric_error_summary(
+    raw_rows: list[tuple[LiteratureRecord, dict[str, float], dict[str, float], Any]],
+    metric: str,
+    group_specs: dict[str, Any],
+) -> dict[str, Any]:
+    grouped = {}
+    for group_name, key_fn in group_specs.items():
+        grouped[group_name] = {}
+        keys = sorted({key_fn(record) for record, _, _, _ in raw_rows})
+        for key in keys:
+            measured = [
+                measured_values[metric]
+                for record, measured_values, _, _ in raw_rows
+                if key_fn(record) == key and metric in measured_values
+            ]
+            predicted = [
+                predicted_values[metric]
+                for record, _, predicted_values, _ in raw_rows
+                if key_fn(record) == key and metric in predicted_values
+            ]
+            if measured:
+                grouped[group_name][key] = _metrics(measured, predicted)
+    return grouped
+
+
+def compare_bread_baking_records(
+    db: Session,
+    records: list[LiteratureRecord] | None = None,
+) -> dict[str, Any]:
+    records = records or load_literature_records(
+        DEFAULT_BREAD_DATASET,
+        required_measured_metrics=("specific_volume_cm3_g",),
+        required_process_fields=("hydration_pct", "baking_time_min"),
+    )
+    calc = BlendCalculator()
+    metric_values: dict[str, dict[str, list[float]]] = {
+        "specific_volume_cm3_g": {"measured": [], "predicted": []},
+        "crumb_hardness_n": {"measured": [], "predicted": []},
+    }
+    raw_rows = []
+
+    for record in records:
+        blend_data = _blend_data_from_record(record, db)
+        props = calc.calculate(blend_data)
+        result = BreadQualitySimulator(_record_bread_params(record)).simulate(props)
+        measured_values = {}
+        predicted_values = {}
+        measured_volume = float(record.measured["specific_volume_cm3_g"])
+        measured_values["specific_volume_cm3_g"] = measured_volume
+        predicted_values["specific_volume_cm3_g"] = result.specific_volume_cm3_g
+        metric_values["specific_volume_cm3_g"]["measured"].append(measured_volume)
+        metric_values["specific_volume_cm3_g"]["predicted"].append(result.specific_volume_cm3_g)
+        if "crumb_hardness_n" in record.measured:
+            hardness = float(record.measured["crumb_hardness_n"])
+            measured_values["crumb_hardness_n"] = hardness
+            predicted_values["crumb_hardness_n"] = result.crumb_hardness_n
+            metric_values["crumb_hardness_n"]["measured"].append(hardness)
+            metric_values["crumb_hardness_n"]["predicted"].append(result.crumb_hardness_n)
+        raw_rows.append((record, measured_values, predicted_values, result))
+
+    metric_summaries = {
+        metric: _metrics(values["measured"], values["predicted"])
+        for metric, values in metric_values.items()
+        if values["measured"]
+    }
+    grouped_errors = {
+        metric: _group_metric_error_summary(
+            raw_rows,
+            metric,
+            {
+                "source": _source_label,
+                "process_family": _bread_process_family,
+                "hydration_pct": lambda record: str(record.process.get("hydration_pct", "unknown")),
+            },
+        )
+        for metric in metric_summaries
+    }
+    rows = []
+    for record, measured_values, predicted_values, result in raw_rows:
+        rows.append(BreadCalibrationRow(
+            id=record.id,
+            measured_specific_volume_cm3_g=_round_or_none(measured_values.get("specific_volume_cm3_g")),
+            simulated_specific_volume_cm3_g=_round_or_none(predicted_values.get("specific_volume_cm3_g")),
+            measured_crumb_hardness_n=_round_or_none(measured_values.get("crumb_hardness_n")),
+            simulated_crumb_hardness_n=_round_or_none(predicted_values.get("crumb_hardness_n")),
+            process_family=_bread_process_family(record),
+            formula=record.mapped_formula,
+            source_doi=record.source.get("doi"),
+            source_label=_source_label(record),
+            calibration_confidence=result.calibration_confidence,
+            calibration_score=result.calibration_score,
+            structure_index=result.structure_index,
+            staling_risk=result.staling_risk,
+        ))
+
+    return {
+        "n_records": len(records),
+        "metric": "specific_volume_cm3_g",
+        "source_count": len({_source_label(record) for record in records}),
+        "metric_summaries": metric_summaries,
+        "grouped_errors": grouped_errors,
+        "record_groups": {
+            "source": _record_counts(records, _source_label),
+            "process_family": _record_counts(records, _bread_process_family),
+        },
+        "rows": [row.__dict__ for row in rows],
+        "limitations": [
+            "Bread calibration is diagnostic and early-stage; no production correction is applied.",
+            "Commercial gluten-free bread mix records are aggregate-mapped because internal mix proportions are not disclosed.",
+            "Millet cultivar records share one generic Millet flour mapping, so cultivar-specific starch behavior is not fully represented.",
+            "Only specific volume has broad coverage in this first dataset; crumb hardness currently has two records.",
         ],
     }
 

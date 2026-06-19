@@ -172,12 +172,26 @@ Current sources include:
 - Liu et al. 2026: extruded rice pasta with konjac glucomannan and curdlan.
 - Detchewa et al. 2016: extruded rice spaghetti with soy protein isolate.
 
+Current bread baking diagnostic dataset:
+
+- 15 records.
+- 3 peer-reviewed sources.
+- Main metric: `specific_volume_cm3_g`.
+- Auxiliary metrics include limited crumb hardness, moisture, water activity, and structure fields where available.
+
+Current bread sources include:
+
+- Singh and Adedeji 2026: proso millet cultivar gluten-free breads.
+- Torres-Perez et al. 2026: additive-removal clean-label gluten-free bread.
+- Loncaric et al. 2026: rice/whey and rice/chickpea gluten-free bread staling.
+
 Important limitation: the linear correction in calibration reports is diagnostic only. It is not treated as production calibration.
 
 Useful files:
 
 - `data/literature/pasta_cooking.jsonl`
 - `docs/pasta-cooking-calibration-report.md`
+- `docs/bread-baking-calibration-report.md`
 - `docs/literature-extraction-template.md`
 - `docs/application-targets-research.md`
 - `docs/flavor-heuristic-model.md`
@@ -201,6 +215,7 @@ Main endpoints:
 | `POST /optimize/application-suggest` | Suggest blends/processes for a specific application |
 | `GET /optimize/flavor-targets` | List flavor target profiles |
 | `GET /calibration/pasta-cooking` | Compare pasta simulator against literature records |
+| `GET /calibration/bread-baking` | Compare bread simulator against literature records |
 | `POST /experiments` | Store experimental observations |
 
 Example pasta cooking request:

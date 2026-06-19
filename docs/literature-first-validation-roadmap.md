@@ -334,7 +334,7 @@ Example table:
 | Domain | Papers | Records | Main Metrics | Confidence | Status |
 |---|---:|---:|---|---|---|
 | Pasta cooking | 3 | 40 | Cooking loss, water uptake, swelling | Medium-high | Literature calibrated |
-| Bread baking | 0 | 0 | Volume, firmness, moisture | Low | Heuristic |
+| Bread baking | 3 | 15 | Specific volume, limited firmness | Medium-low | Early diagnostic validation |
 | Pizza baking | 0 | 0 | Texture, crust, bake fit | Low | Heuristic |
 | Flavor | 0 | 0 | Sensory profile proxy | Low | Heuristic |
 

@@ -3,6 +3,7 @@ import numpy as np
 from glutenix.db.models import Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator, BlendProperties
+from glutenix.engine.bread import BreadQualityParams, BreadQualitySimulator
 from glutenix.engine.cooking import (
     PastaCookingParams,
     PastaCookingResult,
@@ -446,3 +447,50 @@ class TestPastaCookingSimulator:
             PastaCookingSimulator(PastaCookingParams(calcium_lactate_m=-0.1)).simulate(props)
         with pytest.raises(ValueError):
             PastaCookingSimulator(PastaCookingParams(extrusion_moisture_pct=0)).simulate(props)
+
+
+class TestBreadQualitySimulator:
+    def test_simulate_returns_bread_quality_result(self):
+        props = BlendProperties(
+            protein_pct=8.0,
+            starch_pct=75.0,
+            water_absorption=1.5,
+            viscosity_index=2.0,
+            hydrocolloid_pct=0.025,
+            amylose_pct=22.0,
+        )
+
+        result = BreadQualitySimulator().simulate(props)
+
+        assert result.specific_volume_cm3_g > 0
+        assert result.crumb_hardness_n > 0
+        assert 0 <= result.moisture_retention_index <= 1
+        assert result.process_family == "generic_gluten_free_bread"
+        assert result.calibration_confidence == "low"
+
+    def test_commercial_mix_has_medium_confidence(self):
+        props = BlendProperties(
+            protein_pct=6.5,
+            starch_pct=78.0,
+            water_absorption=1.7,
+            viscosity_index=1.4,
+            hydrocolloid_pct=0.01,
+            amylose_pct=22.0,
+            ingredients_detail=[
+                {"name": "Commercial gluten-free bread mix", "proportion": 1.0, "category": "flour"},
+            ],
+        )
+
+        result = BreadQualitySimulator(BreadQualityParams(chemical_leavening_pct=1.7)).simulate(props)
+
+        assert result.process_family == "commercial_mix_bread"
+        assert result.calibration_confidence == "medium"
+
+    def test_rejects_invalid_params(self):
+        import pytest
+
+        props = BlendProperties()
+        with pytest.raises(ValueError):
+            BreadQualitySimulator(BreadQualityParams(hydration_pct=0)).simulate(props)
+        with pytest.raises(ValueError):
+            BreadQualitySimulator(BreadQualityParams(baking_time_min=0)).simulate(props)
