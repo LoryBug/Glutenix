@@ -7,6 +7,11 @@ from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db, get_gpr
 from glutenix.bo.explain import ard_feature_importance
+from glutenix.calibration.coverage import (
+    assess_literature_coverage,
+    build_domain_coverage,
+    domain_for_application,
+)
 from glutenix.db.models import Application, Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
@@ -260,6 +265,8 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
     w_blend = body.w_blend / weight_sum
     w_flavor = body.w_flavor / weight_sum
     calc = BlendCalculator()
+    coverage_domain = domain_for_application(application.name)
+    literature_coverage_summary = build_domain_coverage(db, coverage_domain) if coverage_domain else None
     sweeper = SimulationSweeper()
     baking_temp_range = body.baking_temp
     baking_duration_range = body.baking_duration
@@ -357,6 +364,18 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
         flavor_score = score_flavor_against_target(flavor_profile, flavor_target)
         total_score = w_process * process_score + w_blend * blend_score + w_flavor * flavor_score
         blend_values = _blend_values(blend_props)
+        ingredient_names = [
+            ing.name
+            for (ing, _, _), prop in zip(items, proportions)
+            if prop > 1e-6
+        ]
+        literature_coverage = assess_literature_coverage(
+            application=application.name,
+            ingredient_names=ingredient_names,
+            blend_values=blend_values,
+            process_values=process_data,
+            summary=literature_coverage_summary,
+        ).as_dict()
         model_confidence = serialize_candidate_confidence(assess_candidate_confidence(
             blend_values=blend_values,
             profile=profile,
@@ -364,6 +383,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             blend_score=blend_score,
             flavor_score=flavor_score,
             cooking_metrics=cooking_metrics,
+            literature_coverage=literature_coverage,
         ))
 
         candidates.append((

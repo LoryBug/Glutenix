@@ -217,6 +217,7 @@ Main endpoints:
 | `GET /optimize/flavor-targets` | List flavor target profiles |
 | `GET /calibration/pasta-cooking` | Compare pasta simulator against literature records |
 | `GET /calibration/bread-baking` | Compare bread simulator against literature records |
+| `GET /calibration/coverage` | Report literature-derived coverage ranges and OOD basis |
 | `POST /experiments` | Store experimental observations |
 
 Example pasta cooking request:

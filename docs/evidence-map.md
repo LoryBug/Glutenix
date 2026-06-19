@@ -39,7 +39,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | `PastaCookingSimulator` | `calibrated` | 40 records from 3 pasta papers | Limited texture validation and only 3 sources |
 | `FlavorModel` | `heuristic` | Literature-informed sensory proxy | No measured sensory panel calibration |
 | `ApplicationSuggest` | `heuristic + confidence` | Target profiles, process scores, flavor score, pasta calibration where available | Needs domain calibration beyond pasta |
-| `ModelConfidence` | `initial` | Blend target range fit, score bands, pasta calibration score | Needs literature-derived OOD distances |
+| `ModelConfidence` | `initial + OOD` | Blend target range fit, score bands, pasta calibration score, literature-derived coverage ranges | Needs richer coverage distances and source-specific uncertainty |
 
 ## Application Evidence Details
 
@@ -169,6 +169,7 @@ Implemented first action:
 
 - Build `data/literature/bread_baking.jsonl`.
 - Add a diagnostic `GET /calibration/bread-baking` endpoint.
+- Add `GET /calibration/coverage` for literature-derived range/OOD diagnostics.
 
 Recommended next action:
 

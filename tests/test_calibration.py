@@ -11,6 +11,10 @@ from glutenix.calibration.literature import (
     pasta_calibration_report_markdown,
     validate_literature_dataset,
 )
+from glutenix.calibration.coverage import (
+    assess_application_literature_coverage,
+    summarize_literature_coverage,
+)
 from glutenix.db.base import Base
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 
@@ -111,6 +115,52 @@ class TestLiteratureCalibration:
         }
         assert len(result["rows"]) == 21
         assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
+
+    def test_literature_coverage_summary(self):
+        session = _seeded_session()
+        try:
+            result = summarize_literature_coverage(session)
+        finally:
+            session.close()
+
+        assert set(result["domains"]) == {"pasta_cooking", "bread_baking"}
+        bread = result["domains"]["bread_baking"]
+        assert bread["record_count"] == 21
+        assert bread["source_count"] == 4
+        assert "hydration_pct" in bread["process_ranges"]
+        assert "hydrocolloid_bread" in bread["process_families"]
+        assert "HPMC (Hydroxypropyl Methylcellulose)" in bread["covered_ingredients"]
+
+    def test_literature_coverage_assessment_flags_ood(self):
+        session = _seeded_session()
+        try:
+            assessment = assess_application_literature_coverage(
+                application="Pane",
+                ingredient_names=["White rice flour", "Potato starch"],
+                blend_values={
+                    "protein_pct": 5.0,
+                    "starch_pct": 90.0,
+                    "fat_pct": 0.5,
+                    "fiber_pct": 1.0,
+                    "water_absorption": 4.5,
+                    "viscosity_index": 0.5,
+                    "hydrocolloid_pct": 0.0,
+                    "amylose_pct": 22.0,
+                },
+                process_values={
+                    "hydration_pct": 65.0,
+                    "baking_temp_c": 280.0,
+                    "baking_time_min": 15.0,
+                },
+                db=session,
+            )
+        finally:
+            session.close()
+
+        assert assessment.level in {"low", "medium"}
+        assert assessment.risk_flags
+        assert any("Potato starch" in flag for flag in assessment.risk_flags)
+        assert any("hydration_pct" in flag for flag in assessment.risk_flags)
 
     def test_report_markdown(self):
         session = _seeded_session()

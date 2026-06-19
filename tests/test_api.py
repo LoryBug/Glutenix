@@ -229,6 +229,16 @@ class TestCalibration:
         assert data["record_groups"]["process_family"]["hydrocolloid_bread"] == 6
         assert len(data["rows"]) == 21
 
+    def test_literature_coverage(self):
+        resp = client.get("/calibration/coverage")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert set(data["domains"]) == {"pasta_cooking", "bread_baking"}
+        assert data["domains"]["pasta_cooking"]["record_count"] == 40
+        assert data["domains"]["bread_baking"]["record_count"] == 21
+        assert "hydration_pct" in data["domains"]["bread_baking"]["process_ranges"]
+        assert "water_to_flour_ratio" in data["domains"]["pasta_cooking"]["process_ranges"]
+
 
 class TestUpdateIngredient:
     def test_update(self):
@@ -292,6 +302,7 @@ class TestOptimizeSuggest:
         assert candidate["model_confidence"]["level"] in {"low", "medium", "high"}
         assert candidate["model_confidence"]["basis"]
         assert candidate["model_confidence"]["risk_flags"]
+        assert any("Literature coverage/OOD" in item for item in candidate["model_confidence"]["basis"])
 
     def test_flavor_targets(self):
         resp = client.get("/optimize/flavor-targets")

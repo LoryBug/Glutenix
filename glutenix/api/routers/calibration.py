@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
+from glutenix.calibration.coverage import summarize_literature_coverage
 from glutenix.calibration.literature import compare_bread_baking_records, compare_pasta_cooking_records
 
 router = APIRouter(prefix="/calibration", tags=["calibration"])
@@ -17,3 +18,8 @@ def pasta_cooking_calibration(db: Session = Depends(get_db)) -> dict[str, Any]:
 @router.get("/bread-baking")
 def bread_baking_calibration(db: Session = Depends(get_db)) -> dict[str, Any]:
     return compare_bread_baking_records(db)
+
+
+@router.get("/coverage")
+def literature_coverage(db: Session = Depends(get_db)) -> dict[str, Any]:
+    return summarize_literature_coverage(db)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from glutenix.engine.targets import SweepTargetProfile
 
@@ -19,6 +20,7 @@ def assess_candidate_confidence(
     blend_score: float,
     flavor_score: float,
     cooking_metrics: dict | None = None,
+    literature_coverage: dict[str, Any] | None = None,
 ) -> CandidateConfidence:
     basis: list[str] = []
     risk_flags: list[str] = []
@@ -37,13 +39,32 @@ def assess_candidate_confidence(
         cooking_confidence = 0.45
         risk_flags.append("No direct experimental calibration attached to this application model yet.")
 
-    score = (
-        0.25 * range_score
-        + 0.20 * process_confidence
-        + 0.20 * blend_confidence
-        + 0.15 * flavor_confidence
-        + 0.20 * cooking_confidence
-    )
+    if literature_coverage is not None:
+        literature_confidence = max(0.0, min(float(literature_coverage.get("score", 0.25)), 1.0))
+        level = literature_coverage.get("level", "unknown")
+        basis.append(f"Literature coverage/OOD confidence: {level}.")
+        basis.extend(str(item) for item in literature_coverage.get("basis", []))
+        risk_flags.extend(str(item) for item in literature_coverage.get("risk_flags", []))
+    else:
+        literature_confidence = None
+
+    if literature_confidence is None:
+        score = (
+            0.25 * range_score
+            + 0.20 * process_confidence
+            + 0.20 * blend_confidence
+            + 0.15 * flavor_confidence
+            + 0.20 * cooking_confidence
+        )
+    else:
+        score = (
+            0.20 * range_score
+            + 0.17 * process_confidence
+            + 0.17 * blend_confidence
+            + 0.13 * flavor_confidence
+            + 0.18 * cooking_confidence
+            + 0.15 * literature_confidence
+        )
     score = round(max(0.0, min(score, 1.0)), 4)
 
     if score >= 0.75 and len(risk_flags) <= 2:

@@ -51,3 +51,29 @@ class TestCandidateConfidence:
         assert confidence.score >= 0.75
         assert not confidence.risk_flags
         assert any("Pasta cooking model" in note for note in confidence.basis)
+
+    def test_includes_literature_coverage_warnings(self):
+        profile = get_sweep_target_profile("Pane")
+
+        confidence = assess_candidate_confidence(
+            blend_values={
+                "water_absorption": 4.0,
+                "viscosity_index": 0.5,
+                "hydrocolloid_pct": 0.0,
+                "protein_pct": 4.0,
+            },
+            profile=profile,
+            process_score=0.7,
+            blend_score=0.7,
+            flavor_score=0.7,
+            literature_coverage={
+                "score": 0.2,
+                "level": "low",
+                "basis": [],
+                "risk_flags": ["Process 'hydration_pct' is below literature coverage."],
+            },
+        )
+
+        assert confidence.score < 0.7
+        assert any("Literature coverage/OOD confidence: low" in note for note in confidence.basis)
+        assert any("hydration_pct" in flag for flag in confidence.risk_flags)
