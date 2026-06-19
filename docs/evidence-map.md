@@ -20,7 +20,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | Domain | Current Evidence | Records | Sources | Main Metrics | Current Confidence | Next Priority |
 |---|---:|---:|---:|---|---|---|
 | Pasta cooking | `calibrated` | 40 | 3 | Cooking loss, water uptake, swelling | Medium-high | Add more dried/fresh pasta systems and texture data |
-| Bread baking | `literature-informed` | 15 | 3 | Specific volume, limited crumb hardness | Medium-low | Add more hydrocolloid/protein/fiber bread records |
+| Bread baking | `literature-informed` | 21 | 4 | Specific volume, limited crumb hardness and porosity | Medium-low | Add more hydrocolloid/protein/fiber bread records |
 | Pizza baking | `heuristic` | 0 | 0 | Process fit, crust/core targets, blend targets | Low | Add pizza or flatbread dataset after bread |
 | Sweet leavened doughs | `heuristic` | 0 | 0 | Volume/process/blend targets | Low | Extract enriched dough literature later |
 | Shortcrust/frolla | `heuristic` | 0 | 0 | Low-volume process fit, fat/starch balance | Low | Add biscuit/shortcrust texture papers later |
@@ -35,7 +35,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | `BlendCalculator` | `literature-informed` | Ingredient composition and approximate functional properties | Ingredient provenance and variance ranges are not fully tracked |
 | `FermentationSimulator` | `heuristic` | Mechanistic proxy for gas/volume behavior | No direct validation against gluten-free dough fermentation data |
 | `BakingSimulator` | `literature-informed` | Heat-transfer and gelatinization-inspired proxy plus first bread comparison dataset | Needs broader bread/pizza baking validation |
-| `BreadQualitySimulator` | `literature-informed` | 15 bread records from 3 papers, focused on specific volume | Early diagnostic model; hardness has only two records |
+| `BreadQualitySimulator` | `literature-informed` | 21 bread records from 4 papers, focused on specific volume with limited porosity and hardness | Early diagnostic model; hardness and porosity need more sources |
 | `PastaCookingSimulator` | `calibrated` | 40 records from 3 pasta papers | Limited texture validation and only 3 sources |
 | `FlavorModel` | `heuristic` | Literature-informed sensory proxy | No measured sensory panel calibration |
 | `ApplicationSuggest` | `heuristic + confidence` | Target profiles, process scores, flavor score, pasta calibration where available | Needs domain calibration beyond pasta |
@@ -116,26 +116,29 @@ Current model support:
 - Process sweep can optimize fermentation and baking settings.
 - Blend score uses water absorption, viscosity, hydrocolloid fraction, fiber, and protein ranges.
 - Baking simulator estimates core/crust temperature and gelatinization-inspired heat behavior.
-- Bread quality simulator estimates specific volume, crumb hardness proxy, moisture retention, staling risk, and structure index.
+- Bread quality simulator estimates specific volume, crumb hardness proxy, porosity, moisture retention, staling risk, and structure index.
 
 Structured records:
 
-- 15 total records.
-- 3 peer-reviewed sources.
+- 21 total records.
+- 4 peer-reviewed sources.
 - 9 proso millet cultivar bread records.
 - 4 commercial gluten-free bread mix additive-removal records.
 - 2 rice/chickpea/whey protein bread records.
+- 6 explicit HPMC/xanthan/guar hydrocolloid-combination bread records.
 
 Current sources:
 
 - Singh and Adedeji 2026, DOI `10.3390/foods15101711`, proso millet cultivar gluten-free breads.
 - Torres-Perez et al. 2026, DOI `10.3390/foods15020338`, additive-removal clean-label gluten-free bread.
 - Loncaric et al. 2026, DOI `10.3390/foods15030412`, rice/whey and rice/chickpea gluten-free bread staling.
+- Parsamajd et al. 2025, DOI `10.1002/fsn3.71107`, HPMC/xanthan/guar hydrocolloid-combination gluten-free breads.
 
 Current limitations:
 
 - Specific volume is the only broadly covered metric.
 - Crumb hardness has only two structured records so far.
+- Porosity has eight structured records across two sources, but values may depend strongly on image-analysis method.
 - Commercial bread mix records are aggregate-mapped because internal proportions are not disclosed.
 - Millet cultivar records share a generic `Millet flour` mapping, so cultivar-specific starch functionality is simplified.
 - No independent train/test split is meaningful yet.
@@ -294,7 +297,8 @@ Recommended next action:
 | Core/crust process fit | Not primary | Heuristic | Heuristic | Heuristic | Heuristic |
 | Firmness/hardness | Modeled proxy, not validated | Limited structured | Missing | Missing | Missing |
 | Stickiness/gumminess | Modeled proxy, not validated | Missing | Missing | Missing | Missing |
-| Moisture retention | Not validated | Missing | Missing | Missing | Missing |
+| Porosity/cell structure | Not primary | Limited structured | Missing | Missing | Missing |
+| Moisture retention | Not validated | Auxiliary structured moisture values only | Missing | Missing | Missing |
 | Sensory score | Not validated | Missing | Missing | Missing | Missing |
 
 ## Ingredient Coverage Matrix
@@ -302,13 +306,13 @@ Recommended next action:
 | Ingredient Family | Pasta | Bread | Pizza | Notes |
 |---|---|---|---|---|
 | Rice flour/starch | Medium | Heuristic | Heuristic | Pasta has high-amylose and waxy rice records |
-| Corn starch/flour | Low | Heuristic | Heuristic | Needs bread/pizza literature records |
-| Tapioca starch | Low | Heuristic | Heuristic | Seeded but not validated by literature datasets |
+| Corn starch/flour | Low | Structured in bread | Heuristic | Needs more bread/pizza literature records |
+| Tapioca starch | Low | Structured in bread | Heuristic | Covered in one hydrocolloid bread source |
 | Potato starch | Low | Heuristic | Heuristic | Seeded but not validated by literature datasets |
 | Amaranth flour | Medium | Heuristic | Heuristic | Covered in calcium-alginate pasta only |
-| Buckwheat/quinoa/teff/millet | Low | Heuristic | Heuristic | Flavor and blend heuristics only |
-| HPMC | Low | Heuristic | Heuristic | High priority for bread literature |
-| Xanthan/guar | Low | Heuristic | Heuristic | High priority for bread literature |
+| Buckwheat/quinoa/teff/millet | Low | Limited structured | Heuristic | Millet and quinoa appear in bread records, but cultivar/source coverage is limited |
+| HPMC | Low | Limited structured | Heuristic | Covered in one hydrocolloid bread source |
+| Xanthan/guar | Low | Limited structured | Heuristic | Covered in one hydrocolloid bread source plus xanthan proxy records |
 | Psyllium | Low | Heuristic | Heuristic | High priority for bread/pizza literature |
 | Alginate | Medium | Low | Low | Covered for fresh calcium pasta |
 | KGM/curdlan | Medium | Low | Low | Covered for dried rice pasta |
@@ -321,7 +325,7 @@ Recommended next action:
 | Fresh calcium-gel pasta | Medium-high | 30 records from Lux 2023 |
 | Dried extruded rice pasta | Medium | 10 records from Liu 2026 and Detchewa 2016 |
 | Generic fresh pasta | Low | Heuristic fallback only |
-| Yeast-fermented bread | Medium-low | 15 initial bread records, mostly specific volume |
+| Yeast-fermented bread | Medium-low | 21 records from 4 sources, mostly specific volume plus limited porosity/hardness |
 | High-temperature pizza baking | Low | Simulated but not literature-calibrated |
 | Sweet enriched leavened dough | Low | Simulated but not literature-calibrated |
 | Shortcrust/biscuit baking | Low | Simulated but not literature-calibrated |

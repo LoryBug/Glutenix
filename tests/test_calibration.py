@@ -45,15 +45,16 @@ class TestLiteratureCalibration:
     def test_validate_bread_literature_dataset_summary(self):
         summary = validate_literature_dataset(
             DEFAULT_BREAD_DATASET,
-            required_measured_metrics=("specific_volume_cm3_g",),
+            required_measured_metrics=(),
             required_process_fields=("hydration_pct", "baking_time_min"),
         )
 
-        assert summary["record_count"] == 15
+        assert summary["record_count"] == 21
         assert summary["applications"] == ["Pane"]
-        assert summary["source_count"] == 3
+        assert summary["source_count"] == 4
         assert "specific_volume_cm3_g" in summary["metrics"]
         assert "crumb_hardness_n" in summary["metrics"]
+        assert "porosity_pct" in summary["metrics"]
 
     def test_compare_pasta_cooking_records(self):
         session = _seeded_session()
@@ -96,17 +97,19 @@ class TestLiteratureCalibration:
         finally:
             session.close()
 
-        assert result["n_records"] == 15
-        assert result["source_count"] == 3
+        assert result["n_records"] == 21
+        assert result["source_count"] == 4
         assert result["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in result["metric_summaries"]
         assert "crumb_hardness_n" in result["metric_summaries"]
+        assert "porosity_pct" in result["metric_summaries"]
         assert result["record_groups"]["process_family"] == {
             "commercial_mix_bread": 4,
+            "hydrocolloid_bread": 6,
             "millet_cultivar_bread": 9,
             "protein_enriched_bread": 2,
         }
-        assert len(result["rows"]) == 15
+        assert len(result["rows"]) == 21
         assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
 
     def test_report_markdown(self):

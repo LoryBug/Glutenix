@@ -63,6 +63,8 @@ class BreadCalibrationRow:
     simulated_specific_volume_cm3_g: float | None
     measured_crumb_hardness_n: float | None
     simulated_crumb_hardness_n: float | None
+    measured_porosity_pct: float | None
+    simulated_porosity_pct: float | None
     process_family: str
     formula: dict[str, float]
     source_doi: str | None
@@ -412,6 +414,8 @@ def _bread_process_family(record: LiteratureRecord) -> str:
         return "millet_cultivar_bread"
     if "chickpea" in formula_names or "whey" in formula_names:
         return "protein_enriched_bread"
+    if any(name in formula_names for name in ("hpmc", "xanthan", "guar")):
+        return "hydrocolloid_bread"
     return "generic_gluten_free_bread"
 
 
@@ -446,13 +450,14 @@ def compare_bread_baking_records(
 ) -> dict[str, Any]:
     records = records or load_literature_records(
         DEFAULT_BREAD_DATASET,
-        required_measured_metrics=("specific_volume_cm3_g",),
+        required_measured_metrics=(),
         required_process_fields=("hydration_pct", "baking_time_min"),
     )
     calc = BlendCalculator()
     metric_values: dict[str, dict[str, list[float]]] = {
         "specific_volume_cm3_g": {"measured": [], "predicted": []},
         "crumb_hardness_n": {"measured": [], "predicted": []},
+        "porosity_pct": {"measured": [], "predicted": []},
     }
     raw_rows = []
 
@@ -462,17 +467,24 @@ def compare_bread_baking_records(
         result = BreadQualitySimulator(_record_bread_params(record)).simulate(props)
         measured_values = {}
         predicted_values = {}
-        measured_volume = float(record.measured["specific_volume_cm3_g"])
-        measured_values["specific_volume_cm3_g"] = measured_volume
-        predicted_values["specific_volume_cm3_g"] = result.specific_volume_cm3_g
-        metric_values["specific_volume_cm3_g"]["measured"].append(measured_volume)
-        metric_values["specific_volume_cm3_g"]["predicted"].append(result.specific_volume_cm3_g)
+        if "specific_volume_cm3_g" in record.measured:
+            measured_volume = float(record.measured["specific_volume_cm3_g"])
+            measured_values["specific_volume_cm3_g"] = measured_volume
+            predicted_values["specific_volume_cm3_g"] = result.specific_volume_cm3_g
+            metric_values["specific_volume_cm3_g"]["measured"].append(measured_volume)
+            metric_values["specific_volume_cm3_g"]["predicted"].append(result.specific_volume_cm3_g)
         if "crumb_hardness_n" in record.measured:
             hardness = float(record.measured["crumb_hardness_n"])
             measured_values["crumb_hardness_n"] = hardness
             predicted_values["crumb_hardness_n"] = result.crumb_hardness_n
             metric_values["crumb_hardness_n"]["measured"].append(hardness)
             metric_values["crumb_hardness_n"]["predicted"].append(result.crumb_hardness_n)
+        if "porosity_pct" in record.measured:
+            porosity = float(record.measured["porosity_pct"])
+            measured_values["porosity_pct"] = porosity
+            predicted_values["porosity_pct"] = result.porosity_pct
+            metric_values["porosity_pct"]["measured"].append(porosity)
+            metric_values["porosity_pct"]["predicted"].append(result.porosity_pct)
         raw_rows.append((record, measured_values, predicted_values, result))
 
     metric_summaries = {
@@ -500,6 +512,8 @@ def compare_bread_baking_records(
             simulated_specific_volume_cm3_g=_round_or_none(predicted_values.get("specific_volume_cm3_g")),
             measured_crumb_hardness_n=_round_or_none(measured_values.get("crumb_hardness_n")),
             simulated_crumb_hardness_n=_round_or_none(predicted_values.get("crumb_hardness_n")),
+            measured_porosity_pct=_round_or_none(measured_values.get("porosity_pct")),
+            simulated_porosity_pct=_round_or_none(predicted_values.get("porosity_pct")),
             process_family=_bread_process_family(record),
             formula=record.mapped_formula,
             source_doi=record.source.get("doi"),
@@ -525,7 +539,7 @@ def compare_bread_baking_records(
             "Bread calibration is diagnostic and early-stage; no production correction is applied.",
             "Commercial gluten-free bread mix records are aggregate-mapped because internal mix proportions are not disclosed.",
             "Millet cultivar records share one generic Millet flour mapping, so cultivar-specific starch behavior is not fully represented.",
-            "Only specific volume has broad coverage in this first dataset; crumb hardness currently has two records.",
+            "Only specific volume has broad coverage in this first dataset; crumb hardness and porosity have limited source coverage.",
         ],
     }
 

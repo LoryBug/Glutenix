@@ -27,6 +27,7 @@ class BreadQualityParams:
 class BreadQualityResult:
     specific_volume_cm3_g: float
     crumb_hardness_n: float
+    porosity_pct: float
     moisture_retention_index: float
     staling_risk: float
     structure_index: float
@@ -89,6 +90,9 @@ class BreadQualitySimulator:
         millet = self._ingredient_fraction(blend_props, "millet")
         commercial_mix = self._ingredient_fraction(blend_props, "commercial gluten-free bread mix")
         whey = self._ingredient_fraction(blend_props, "whey")
+        hpmc = self._ingredient_fraction(blend_props, "hpmc")
+        guar = self._ingredient_fraction(blend_props, "guar")
+        xanthan = self._ingredient_fraction(blend_props, "xanthan")
 
         structure = float(np.clip(
             0.32 * blend_props.viscosity_index / 2.4
@@ -138,6 +142,17 @@ class BreadQualitySimulator:
             - 2.0 * whey
         )
         hardness = float(np.clip(hardness, 1.0, 80.0))
+        porosity = float(np.clip(
+            18.0
+            + 4.8 * specific_volume
+            + 5.0 * structure
+            + 3.2 * hydration_fit
+            + 2.5 * min(blend_props.hydrocolloid_pct / 0.025, 1.2)
+            - 2.0 * chickpea
+            - 1.0 * millet,
+            8.0,
+            55.0,
+        ))
         moisture_retention = float(np.clip(
             0.45
             + 0.20 * hydration_fit
@@ -161,6 +176,10 @@ class BreadQualitySimulator:
             process_family = "protein_enriched_bread"
             calibration_score = 0.6
             notes.append("Covered by rice/chickpea or rice/whey protein gluten-free bread literature.")
+        elif blend_props.hydrocolloid_pct >= 0.015 and hpmc + guar + xanthan > 0:
+            process_family = "hydrocolloid_bread"
+            calibration_score = 0.55
+            notes.append("Covered by hydrocolloid-combination gluten-free bread literature; volume and texture coverage remains limited.")
         else:
             process_family = "generic_gluten_free_bread"
             calibration_score = 0.35
@@ -176,6 +195,7 @@ class BreadQualitySimulator:
         return BreadQualityResult(
             specific_volume_cm3_g=round(specific_volume, 4),
             crumb_hardness_n=round(hardness, 4),
+            porosity_pct=round(porosity, 4),
             moisture_retention_index=round(moisture_retention, 4),
             staling_risk=round(staling_drive, 4),
             structure_index=round(structure, 4),

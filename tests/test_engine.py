@@ -464,6 +464,7 @@ class TestBreadQualitySimulator:
 
         assert result.specific_volume_cm3_g > 0
         assert result.crumb_hardness_n > 0
+        assert result.porosity_pct > 0
         assert 0 <= result.moisture_retention_index <= 1
         assert result.process_family == "generic_gluten_free_bread"
         assert result.calibration_confidence == "low"
@@ -484,6 +485,24 @@ class TestBreadQualitySimulator:
         result = BreadQualitySimulator(BreadQualityParams(chemical_leavening_pct=1.7)).simulate(props)
 
         assert result.process_family == "commercial_mix_bread"
+        assert result.calibration_confidence == "medium"
+
+    def test_hydrocolloid_bread_has_medium_confidence(self):
+        props = BlendProperties(
+            protein_pct=8.0,
+            starch_pct=75.0,
+            water_absorption=1.5,
+            viscosity_index=2.0,
+            hydrocolloid_pct=0.02,
+            amylose_pct=22.0,
+            ingredients_detail=[
+                {"name": "HPMC (Hydroxypropyl Methylcellulose)", "proportion": 0.02, "category": "hydrocolloid"},
+            ],
+        )
+
+        result = BreadQualitySimulator().simulate(props)
+
+        assert result.process_family == "hydrocolloid_bread"
         assert result.calibration_confidence == "medium"
 
     def test_rejects_invalid_params(self):
