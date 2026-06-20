@@ -326,7 +326,7 @@ Recommended next action:
 | Fresh calcium-gel pasta | Medium-high | 30 records from Lux 2023 |
 | Dried extruded rice pasta | Medium | 10 records from Liu 2026 and Detchewa 2016 |
 | Generic fresh pasta | Low | Heuristic fallback only |
-| Yeast-fermented bread | Medium-low | 21 records from 4 sources, mostly specific volume plus limited porosity/hardness |
+| Yeast-fermented bread | Medium-low | 33 records from 6 sources, specific volume and crumb hardness from hydrocolloid and protein-enriched families |
 | High-temperature pizza baking | Low | Simulated but not literature-calibrated |
 | Sweet enriched leavened dough | Low | Simulated but not literature-calibrated |
 | Shortcrust/biscuit baking | Low | Simulated but not literature-calibrated |

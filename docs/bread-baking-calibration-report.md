@@ -1,33 +1,35 @@
 # Bread Baking Literature Calibration Report
 
-Date: 2026-06-19
+Date: 2026-06-20
 
 This report compares the early `BreadQualitySimulator` against structured gluten-free bread literature records. It is diagnostic only: the bread model is new, the dataset is small, and no production calibration correction is applied.
 
 ## Sources
 
 - Singh M, Adedeji AA. `Proso Millet Cultivar Effects on Rheology of Dough and Quality Characteristics of Gluten-Free Breads`. Foods, 2026, 15(10):1711.
-- DOI: `10.3390/foods15101711`
-- PMCID: `PMC13206684`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC13206684/`
+  - DOI: `10.3390/foods15101711`
+  - PMCID: `PMC13206684`
 - Torres-Perez R, Siguero-Tudela MM, Domenech T, Garcia-Segovia P, Martinez-Monzo J, Igual M. `Effect of Additive Removal on the Physicochemical Properties of Gluten-Free Bread`. Foods, 2026, 15(2):338.
-- DOI: `10.3390/foods15020338`
-- PMCID: `PMC12841426`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC12841426/`
+  - DOI: `10.3390/foods15020338`
+  - PMCID: `PMC12841426`
 - Loncaric P, Jukic M, Cozmuta AM, et al. `FTIR-Based Study of Starch Retrogradation and Protein Structure in Chickpea-Enriched Gluten-Free Bread During Storage`. Foods, 2026, 15(3):412.
-- DOI: `10.3390/foods15030412`
-- PMCID: `PMC12897030`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC12897030/`
+  - DOI: `10.3390/foods15030412`
+  - PMCID: `PMC12897030`
 - Parsamajd S, et al. `Synergistic Effects of Hydrocolloid Combinations on Gluten-Free Batter and Bread Characteristics`. Food Science & Nutrition, 2025.
-- DOI: `10.1002/fsn3.71107`
-- PMCID: `PMC12540201`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC12540201/`
+  - DOI: `10.1002/fsn3.71107`
+  - PMCID: `PMC12540201`
+- Belorio M, Gomez M. `Effect of Hydration on Gluten-Free Breads Made with Hydroxypropyl Methylcellulose in Comparison with Psyllium and Xanthan Gum`. Foods, 2020, 9(11):1548.
+  - DOI: `10.3390/foods9111548`
+  - PMCID: `PMC7693925`
+- Wojcik M, Rozylo R, Schonlechner R, Berger MV. `Physico-chemical properties of an innovative gluten-free, low-carbohydrate and high protein-bread enriched with pea protein powder`. Scientific Reports, 2021, 11:14498.
+  - DOI: `10.1038/s41598-021-93834-0`
+  - PMCID: `PMC8280221`
 
 ## Dataset
 
-Records: 21
+Records: 33
 
-Sources: 4
+Sources: 6
 
 Main metric: `specific_volume_cm3_g`
 
@@ -46,21 +48,24 @@ Coverage:
 - 9 proso millet cultivar breads.
 - 4 commercial gluten-free bread mix additive-removal treatments.
 - 2 protein-enriched rice/chickpea/whey breads.
-- 6 explicit HPMC/xanthan/guar hydrocolloid-combination breads.
+- 6 explicit HPMC/xanthan/guar hydrocolloid-combination breads (Parsamajd 2025).
+- 6 rice-flour and maize-starch HPMC/psyllium/xanthan breads (Belorio 2020).
+- 1 control hydrocolloid bread (Wojcik 2021, 0% pea protein).
+- 5 pea-protein-enriched breads at 5-25% substitution (Wojcik 2021).
 
 ## Error Summary
 
 | Metric | Records | MAE | RMSE | Bias |
-|---|---:|---:|---:|---:|
-| `specific_volume_cm3_g` | 15 | 0.2042 | 0.264 | -0.042 |
-| `crumb_hardness_n` | 2 | 1.9026 | 1.9057 | 0.1078 |
+|---|---|---|---:|---:|---:|
+| `specific_volume_cm3_g` | 27 | 0.4922 | 1.117 | -0.1641 |
+| `crumb_hardness_n` | 20 | 5.8552 | 9.3884 | -1.8843 |
 | `porosity_pct` | 8 | 5.6942 | 10.1545 | 5.6484 |
 
-The specific-volume result is useful as an initial diagnostic, but it should not be overinterpreted. Nine millet records share the same generic `Millet flour` mapping, so cultivar-level variation is mostly invisible to the current model.
+The specific-volume MAE has increased from 0.2042 to 0.4922 as new hydrocolloid and protein-enriched records widened the formulation space. The rice-flour-based Belorio records (1.33-1.48 cm3/g) and the very high maize-starch+HPMC record (7.58 cm3/g) challenge the model's uniform treatment of starch and flour bases.
 
-The crumb-hardness result is based on only two records and should be treated as a sanity check, not validation.
+Crumb hardness coverage has grown from 2 to 20 records, though MAE is 5.85 N. The model underestimates Belorio's high hardness values (e.g., 42.44 N simulated as 12.0 N) and overestimates Wojcik's softer protein-enriched breads.
 
-The porosity result is based on Loncaric 2026 and Parsamajd 2025. It is useful for checking structural scale, but porosity values are sensitive to imaging and thresholding methods, so cross-paper error is not a production calibration.
+Porosity remains unchanged at 8 records from Parsamajd 2025 and Loncaric 2026.
 
 ## Record Groups
 
@@ -69,18 +74,21 @@ By process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `hydrocolloid_bread` | 6 |
+| `hydrocolloid_bread` | 13 |
 | `millet_cultivar_bread` | 9 |
-| `protein_enriched_bread` | 2 |
+| `protein_enriched_bread` | 7 |
 
 By source:
 
 | Source | Records |
 |---|---:|
 | `10.1002/fsn3.71107` | 6 |
+| `10.1016/j.heliyon.2022.e12164` | 0 |
+| `10.1038/s41598-021-93834-0` | 6 |
 | `10.3390/foods15101711` | 9 |
 | `10.3390/foods15020338` | 4 |
 | `10.3390/foods15030412` | 2 |
+| `10.3390/foods9111548` | 6 |
 
 ## Rows
 
@@ -107,29 +115,45 @@ By source:
 | `parsamajd_2025_xanthan_guar` | None | None | None | None | 35.45 | 35.8739 | `hydrocolloid_bread` |
 | `parsamajd_2025_hpmc_guar` | None | None | None | None | 35.19 | 35.8274 | `hydrocolloid_bread` |
 | `parsamajd_2025_hpmc_xanthan` | None | None | None | None | 36.04 | 35.8568 | `hydrocolloid_bread` |
+| `belorio_2020_rf_hpmc` | 1.33 | 1.997 | 42.44 | 11.996 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_rf_psyllium` | 1.44 | 2.1447 | 14.98 | 11.3464 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_rf_xanthan` | 1.48 | 2.1488 | 9.04 | 11.3298 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_ms_hpmc` | 7.58 | 2.1064 | 1.44 | 11.6942 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_ms_psyllium` | 2.37 | 2.1107 | 19.51 | 11.6759 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_ms_xanthan` | 2.25 | 2.1145 | 19.58 | 11.66 | None | None | `hydrocolloid_bread` |
+| `wojcik_2021_ppp0` | 2.962 | 2.1798 | 4.5 | 8.2334 | None | None | `hydrocolloid_bread` |
+| `wojcik_2021_ppp5` | 2.533 | 2.2006 | 4.0 | 8.1167 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp10` | 2.253 | 2.2213 | 4.5 | 8.0022 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp15` | 1.986 | 2.2418 | 6.0 | 7.8897 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp20` | 1.823 | 2.2623 | 8.0 | 7.7793 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp25` | 1.805 | 2.2826 | 10.0 | 7.6709 | None | None | `protein_enriched_bread` |
 
 ## Interpretation
 
-The bread model is now connected to real measured bread outcomes, but it remains early-stage.
+The bread model is now connected to 33 measured bread outcomes from 6 peer-reviewed sources covering 4 process families. Key observations:
 
-The model captures approximate volume scale across three families: millet-corn starch bread, commercial bread mix treatments, and protein-enriched rice/chickpea/whey bread. It now also tracks a hydrocolloid-combination family through porosity records, but those records do not include specific volume in the XML tables. The weakest point is source-specific detail: commercial mixes are aggregate-mapped, and millet cultivar differences are collapsed into one generic millet ingredient.
+**Specific volume** (27 records): MAE has risen to 0.49 as the model confronts diverse formulation spaces. The Belorio 2020 rice-flour records (1.33-1.48 cm3/g) are underpredicted by the current starch model, while the extreme maize-starch+HPMC record (7.58 cm3/g) is severely underpredicted (2.11), highlighting that starch type differences are not yet captured. The Wojcik 2021 pea-protein series shows a clear dose-response trend (2.96 -> 1.81 cm3/g) that the model partially follows but underestimates the rate of volume loss.
 
-This means Glutenix can now say more than “bread is heuristic”, but it still cannot claim broad bread validation.
+**Crumb hardness** (20 records): The model now has substantial hardness coverage, but MAE is 5.85 N. The model systematically underestimates the very hard Belorio RF+HPMC crumb (42.44 N) and overestimates the softer protein-enriched breads (~4-10 N simulated as ~8 N). These biases likely reflect the absence of drying/staling kinetics in the current heuristic.
+
+**Porosity** (8 records): Unchanged at MAE 5.69. The model systematically overpredicts porosity by ~5.6 points, likely because the heuristic conflates gas retention with structural openness.
+
+The model captures approximate volume scale across four families. The weakest point remains ingredient-level detail: commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and the model does not differentiate starch type (rice vs. maize).
 
 ## Immediate Improvements
 
-1. Add bread papers where HPMC, xanthan, psyllium, or guar levels are varied explicitly and include specific volume or texture tables.
-2. Add papers with table values for crumb hardness over storage.
-3. Extract cultivar-specific millet composition from supplementary files if available.
-4. Replace commercial aggregate mix records with papers that disclose full formula proportions.
-5. Add literature-derived coverage ranges to `model_confidence` and OOD warnings.
+1. Differentiate starch-type functional properties (rice vs. maize vs. tapioca) in the ingredient model.
+2. Add baking-loss coupling to improve moisture-dependent hardness predictions.
+3. Extract additional protein/fiber enriched bread papers with both volume and texture tables.
+4. Replace commercial aggregate mix records with fully disclosed formula papers.
+5. Investigate whether the systematic porosity overprediction is a model bias or a measurement-scale artifact.
 
 ## Limitations
 
 - The model is diagnostic only and applies no fitted correction.
-- The dataset is still small: 21 records from 4 papers.
-- Specific volume is the only broadly covered metric.
-- Hardness has only two records.
-- Porosity has eight records, but cross-paper methods may not be directly comparable.
-- Some records use approximate ingredient mapping due incomplete published formula disclosure.
-- The current model does not represent cultivar-specific starch functionality unless it is encoded in seed ingredient properties.
+- The dataset is still small: 33 records from 6 papers.
+- Specific volume MAE (0.49) is dominated by the maize-starch+HPMC outlier (7.58 vs 2.11).
+- Hardness predictions are directionally correct but inaccurate in magnitude.
+- Porosity overprediction bias suggests structural modelling needs refinement.
+- Some records use approximate ingredient mapping due to incomplete published formula disclosure.
+- The current model does not represent cultivar-specific or starch-type-specific functionality.
