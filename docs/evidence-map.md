@@ -1,6 +1,6 @@
 # Glutenix Evidence Map
 
-Date: 2026-06-19
+Date: 2026-06-20
 
 This document tracks what Glutenix can currently support with literature evidence, what is still heuristic, and which literature should be added next.
 
@@ -20,7 +20,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | Domain | Current Evidence | Records | Sources | Main Metrics | Current Confidence | Next Priority |
 |---|---:|---:|---:|---|---|---|
 | Pasta cooking | `calibrated` | 40 | 3 | Cooking loss, water uptake, swelling | Medium-high | Add more dried/fresh pasta systems and texture data |
-| Bread baking | `literature-informed` | 36 | 7 | Specific volume, crumb hardness, porosity | Medium-low | Add more hydrocolloid/protein/fiber bread records |
+| Bread baking | `literature-informed` | 45 | 8 | Specific volume, crumb hardness, porosity | Medium-low | Add more hydrocolloid/protein/fiber bread records |
 | Pizza baking | `heuristic` | 0 | 0 | Process fit, crust/core targets, blend targets | Low | Add pizza or flatbread dataset after bread |
 | Sweet leavened doughs | `heuristic` | 0 | 0 | Volume/process/blend targets | Low | Extract enriched dough literature later |
 | Shortcrust/frolla | `heuristic` | 0 | 0 | Low-volume process fit, fat/starch balance | Low | Add biscuit/shortcrust texture papers later |
@@ -35,7 +35,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | `BlendCalculator` | `literature-informed` | Ingredient composition and approximate functional properties | Ingredient provenance and variance ranges are not fully tracked |
 | `FermentationSimulator` | `heuristic` | Mechanistic proxy for gas/volume behavior | No direct validation against gluten-free dough fermentation data |
 | `BakingSimulator` | `literature-informed` | Heat-transfer and gelatinization-inspired proxy plus first bread comparison dataset | Needs broader bread/pizza baking validation |
-| `BreadQualitySimulator` | `literature-informed` | 36 bread records from 7 papers, covering specific volume, crumb hardness, and porosity | Early diagnostic model; hardness and porosity need more sources |
+| `BreadQualitySimulator` | `literature-informed` | 45 bread records from 8 papers, covering specific volume, crumb hardness, and porosity | Early diagnostic model; hardness and porosity need more sources |
 | `PastaCookingSimulator` | `calibrated` | 40 records from 3 pasta papers | Limited texture validation and only 3 sources |
 | `FlavorModel` | `heuristic` | Literature-informed sensory proxy | No measured sensory panel calibration |
 | `ApplicationSuggest` | `heuristic + confidence` | Target profiles, process scores, flavor score, pasta calibration where available | Needs domain calibration beyond pasta |
@@ -120,8 +120,8 @@ Current model support:
 
 Structured records:
 
-- 36 total records.
-- 7 peer-reviewed sources.
+- 45 total records.
+- 8 peer-reviewed sources.
 - 9 proso millet cultivar bread records.
 - 4 commercial gluten-free bread mix additive-removal records.
 - 2 rice/chickpea/whey protein bread records (Loncaric 2026).
@@ -129,6 +129,7 @@ Structured records:
 - 6 rice-flour and maize-starch HPMC/psyllium/xanthan breads (Belorio 2020).
 - 6 explicit HPMC/xanthan/guar hydrocolloid-combination bread records (Parsamajd 2025).
 - 6 pea-protein-enriched breads at 0-25% substitution (Wojcik 2021).
+- 9 tapioca starch/red lentil flour mixture design bread records (Bianchi 2026).
 
 Current sources:
 
@@ -139,12 +140,13 @@ Current sources:
 - Belorio and Gomez 2020, DOI `10.3390/foods9111548`, hydration effects in rice/maize HPMC/psyllium/xanthan breads.
 - Wojcik et al. 2021, DOI `10.1038/s41598-021-93834-0`, pea-protein-enriched buckwheat/flaxseed gluten-free bread.
 - Kahraman et al. 2022, DOI `10.3390/foods11020199`, raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
+- Bianchi et al. 2026, DOI `10.3390/foods15071230`, tapioca starch/red lentil flour mixture design gluten-free bread with guar gum.
 
 Current limitations:
 
 - Specific volume is the only broadly covered metric.
-- Crumb hardness has only two structured records so far.
-- Porosity has eight structured records across two sources, but values may depend strongly on image-analysis method.
+- Crumb hardness has 26 structured records across five sources.
+- Porosity has 20 structured records across three sources (Kahraman 2022, Bianchi 2026, Parsamajd 2025), but values may depend strongly on image-analysis method.
 - Commercial bread mix records are aggregate-mapped because internal proportions are not disclosed.
 - Millet cultivar records share a generic `Millet flour` mapping, so cultivar-specific starch functionality is simplified.
 - No independent train/test split is meaningful yet.
@@ -332,7 +334,7 @@ Recommended next action:
 | Fresh calcium-gel pasta | Medium-high | 30 records from Lux 2023 |
 | Dried extruded rice pasta | Medium | 10 records from Liu 2026 and Detchewa 2016 |
 | Generic fresh pasta | Low | Heuristic fallback only |
-| Yeast-fermented bread | Medium-low | 36 records from 7 sources, specific volume and crumb hardness from hydrocolloid and protein-enriched families |
+| Yeast-fermented bread | Medium-low | 45 records from 8 sources, specific volume and crumb hardness from hydrocolloid and protein-enriched families |
 | High-temperature pizza baking | Low | Simulated but not literature-calibrated |
 | Sweet enriched leavened dough | Low | Simulated but not literature-calibrated |
 | Shortcrust/biscuit baking | Low | Simulated but not literature-calibrated |

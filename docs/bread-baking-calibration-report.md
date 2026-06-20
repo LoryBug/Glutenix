@@ -31,9 +31,9 @@ This report compares the early `BreadQualitySimulator` against structured gluten
 <!-- generated-start: bread-calibration-summary -->
 ## Dataset
 
-Records: 36
+Records: 45
 
-Sources: 7
+Sources: 8
 
 Main metric: `specific_volume_cm3_g`
 
@@ -52,16 +52,16 @@ Coverage by process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `hydrocolloid_bread` | 13 |
+| `hydrocolloid_bread` | 16 |
 | `millet_cultivar_bread` | 9 |
-| `protein_enriched_bread` | 10 |
+| `protein_enriched_bread` | 16 |
 
 ## Error Summary
 
 | Metric | Records | MAE | RMSE | Bias |
 |---|---:|---:|---:|---:|
-| `specific_volume_cm3_g` | 30 | 0.5054 | 1.0795 | -0.2885 |
-| `crumb_hardness_n` | 17 | 5.7347 | 8.6809 | 0.6221 |
+| `specific_volume_cm3_g` | 39 | 0.4391 | 0.9536 | -0.1716 |
+| `crumb_hardness_n` | 26 | 6.7698 | 8.7256 | 3.4269 |
 | `porosity_pct` | 11 | 7.5321 | 10.8127 | 0.8222 |
 
 ## Record Groups
@@ -71,9 +71,9 @@ By process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `hydrocolloid_bread` | 13 |
+| `hydrocolloid_bread` | 16 |
 | `millet_cultivar_bread` | 9 |
-| `protein_enriched_bread` | 10 |
+| `protein_enriched_bread` | 16 |
 
 By source:
 
@@ -84,6 +84,7 @@ By source:
 | `10.3390/foods11020199` | 3 |
 | `10.3390/foods15020338` | 4 |
 | `10.3390/foods15030412` | 2 |
+| `10.3390/foods15071230` | 9 |
 | `10.3390/foods15101711` | 9 |
 | `10.3390/foods9111548` | 6 |
 
@@ -127,12 +128,21 @@ By source:
 | `kahraman_2022_cf` | 2.51 | 1.6641 | 13.37 | 16.9552 | 41.49 | 32.6118 | `protein_enriched_bread` |
 | `kahraman_2022_rcf` | 2.89 | 1.6641 | 5.49 | 16.9552 | 51.41 | 32.6118 | `protein_enriched_bread` |
 | `kahraman_2022_dcf` | 2.75 | 1.6641 | 14.05 | 16.9552 | 41.84 | 32.6118 | `protein_enriched_bread` |
+| `bianchi_2026_s1` | 2.18 | 2.3289 | 2.93 | 11.1506 | None | None | `hydrocolloid_bread` |
+| `bianchi_2026_s2` | 1.84 | 2.2632 | 8.09 | 14.6366 | None | None | `protein_enriched_bread` |
+| `bianchi_2026_s3` | 2.12 | 2.2496 | 5.25 | 14.721 | None | None | `protein_enriched_bread` |
+| `bianchi_2026_s4` | 2.07 | 2.3507 | 3.05 | 11.1146 | None | None | `hydrocolloid_bread` |
+| `bianchi_2026_s5` | 2.1 | 2.3069 | 3.88 | 12.8724 | None | None | `protein_enriched_bread` |
+| `bianchi_2026_s6` | 2.16 | 2.296 | 3.56 | 12.8921 | None | None | `protein_enriched_bread` |
+| `bianchi_2026_s7` | 2.14 | 2.3401 | 3.35 | 11.1315 | None | None | `hydrocolloid_bread` |
+| `bianchi_2026_s8` | 1.97 | 2.274 | 5.67 | 14.6163 | None | None | `protein_enriched_bread` |
+| `bianchi_2026_s9` | 2.14 | 2.2753 | 1.83 | 12.9995 | None | None | `protein_enriched_bread` |
 
 <!-- generated-end: bread-calibration-summary -->
 
 ## Interpretation
 
-The bread model is now connected to 36 measured bread outcomes from 7 peer-reviewed sources covering 4 process families. Key observations:
+The bread model is now connected to 45 measured bread outcomes from 8 peer-reviewed sources covering 4 process families. Key observations:
 
 **Specific volume** (30 records): MAE is 0.5054. The Kahraman 2022 chickpea-enriched records (2.51-2.89 cm3/g) are severely underpredicted (simulated as 1.66), revealing that chickpea protein gas-retention enhancement is not captured by the current model. The Wojcik 2021 pea-protein dose-response and the Belorio 2020 rice/HPMC underprediction remain as previously identified gaps.
 
@@ -144,7 +154,7 @@ The model captures approximate volume scale across four families. The weakest po
 
 ## Post-Expansion Systematic Bias Review
 
-This section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3) and 3 records from Kahraman 2022 (issue #9). The expanded dataset (36 records, 7 sources, 4 families) enables cross-family bias comparison.
+This section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3) and 3 records from Kahraman 2022 (issue #9) and 9 records from Bianchi 2026 (issue #23). The expanded dataset (45 records, 8 sources, 4 families) enables cross-family bias comparison.
 
 ### Volume bias by process family
 
@@ -204,7 +214,7 @@ The coverage limitations in `coverage.py` remain accurate: strongest for specifi
 ## Limitations
 
 - The model is diagnostic only and applies no fitted correction.
-- The dataset is still small: 36 records from 7 papers.
+- The dataset is still small: 45 records from 8 papers.
 - Specific volume MAE (0.5054) is driven by Belorio maize-starch+HPMC outlier (7.58 vs 2.11) and Kahraman chickpea underprediction (2.51-2.89 vs 1.66).
 - Hardness predictions are directionally correct but inaccurate in magnitude.
 - Porosity bias improved (+5.74 to +0.82) but MAE increased (5.74 to 7.53) as the model now both over- and under-predicts across different protein systems.
