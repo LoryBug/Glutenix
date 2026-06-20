@@ -140,7 +140,56 @@ The bread model is now connected to 33 measured bread outcomes from 6 peer-revie
 
 The model captures approximate volume scale across four families. The weakest point remains ingredient-level detail: commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and the model does not differentiate starch type (rice vs. maize).
 
-## Immediate Improvements
+## Post-Expansion Systematic Bias Review
+
+This section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3). The expanded dataset (33 records, 6 sources, 4 families) enables cross-family bias comparison.
+
+### Volume bias by process family
+
+| Family | n | Mean bias (meas - sim) | Direction |
+|---|---|---|---:|
+| `commercial_mix_bread` | 4 | +0.28 | Model slightly underpredicts |
+| `hydrocolloid_bread` | 7 | +0.66 | Model notably underpredicts |
+| `millet_cultivar_bread` | 9 | +0.04 | Excellent agreement |
+| `protein_enriched_bread` | 7 | -0.24 | Model slightly overpredicts |
+
+The millet cultivar breads show the best volume agreement. Hydrocolloid breads are the most biased (+0.66), driven by the Belorio rice-flour records (1.33-1.48 measured vs ~2.1 simulated) and the extreme maize-starch+HPMC outlier (7.58 vs 2.11). Excluding the single maize-starch outlier drops the volume MAE from 0.4922 to ~0.38, confirming it dominates the current error.
+
+### Hardness bias by process family
+
+| Family | n | Mean bias (meas - sim) | Direction |
+|---|---|---|---:|
+| `hydrocolloid_bread` | 7 | +4.79 | Model severely underpredicts |
+| `protein_enriched_bread` | 7 | -1.02 | Model slightly overpredicts |
+
+Hardness coverage grew from 2 to 20 records. The Belorio RF+HPMC record (42.44 measured vs 12.0 simulated) accounts for most of the hydrocolloid bias. With it removed, the remaining 6 records average +2.37. The protein-enriched breads show small negative bias, indicating the model moderately overestimates hardness.
+
+### Porosity bias by process family
+
+| Family | n | Mean bias (meas - sim) | Direction |
+|---|---|---|---:|
+| `hydrocolloid_bread` | 6 | -0.80 | Close agreement |
+| `protein_enriched_bread` | 2 | -20.18 | Model massively overpredicts |
+
+Porosity is well-captured for Parsamajd hydrocolloid-combination breads (6 records, -0.80 bias) but severely overpredicted for the 2 Loncaric protein-enriched records (~20 points). This suggests the current structural heuristic (porosity driven by hydrocolloid fraction) does not capture protein-network contributions to crumb structure.
+
+### Coverage alignment
+
+The `model_confidence` coverage module correctly flags:
+- **Covered ingredients**: All 19 mapped ingredients appear in at least one bread record
+- **Process families**: 4 of 4 bread families have records; no active Pane recipe lacks a family match
+- **Risk flags**: Candidate recipes using maize starch, tapioca, or unlisted protein powders would be flagged as outside ingredient coverage
+
+The coverage limitations in `coverage.py` remain accurate: strongest for specific volume, limited for hardness and porosity, and no table-backed specific volume for explicit hydrocolloid combinations (Parsamajd 2025).
+
+### Actionable findings
+
+1. **Starch-type differentiation** — The maize-starch vs rice-flour gap is the single clearest modeling deficiency. Maize starch produces radically different volumes in Belorio 2020. A follow-up modeling issue should add starch-type functional parameters (rice, maize, tapioca) to `BlendProperties` and the bread simulator.
+
+2. **Hardness prediction for hydrocolloid breads** — `BreadQualitySimulator` lacks hydrocolloid-specific texture effects. Creating a hydrocolloid viscosity-to-hardness mapping is warranted but requires more cross-study hardness data to avoid overfitting to Belorio alone.
+
+3. **Protein-enriched porosity** — Protein enrichment severely alters crumb structure in ways the current model does not represent. This is a candidate cleanup issue once 3+ additional protein-enriched porosity sources are extracted.
+
 
 1. Differentiate starch-type functional properties (rice vs. maize vs. tapioca) in the ingredient model.
 2. Add baking-loss coupling to improve moisture-dependent hardness predictions.
