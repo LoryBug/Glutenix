@@ -209,8 +209,71 @@ class TestLiteratureCalibration:
         finally:
             session.close()
 
-        assert assessment.level in {"low", "medium"}
+        assert assessment.level == "low"
+        assert assessment.mechanism_coverage == 0.0
+        assert assessment.calibration_coverage < 0.5
         assert any("tg_pct" in flag for flag in assessment.risk_flags)
+
+    def test_literature_coverage_assessment_downgrades_sparse_quinoa(self):
+        session = _seeded_session()
+        try:
+            assessment = assess_application_literature_coverage(
+                application="Pane",
+                ingredient_names=["Quinoa flour", "White rice flour"],
+                blend_values={
+                    "protein_pct": 9.0,
+                    "starch_pct": 74.0,
+                    "fat_pct": 1.0,
+                    "fiber_pct": 2.0,
+                    "water_absorption": 1.6,
+                    "viscosity_index": 1.4,
+                    "hydrocolloid_pct": 0.0,
+                    "amylose_pct": 18.0,
+                },
+                process_values={
+                    "hydration_pct": 100.0,
+                    "baking_temp_c": 190.0,
+                    "baking_time_min": 35.0,
+                },
+                db=session,
+            )
+        finally:
+            session.close()
+
+        assert assessment.level == "low"
+        assert assessment.calibration_coverage < 0.5
+        assert any("Quinoa flour" in flag for flag in assessment.risk_flags)
+
+    def test_literature_coverage_plain_hydrocolloid_keeps_medium_or_high(self):
+        session = _seeded_session()
+        try:
+            assessment = assess_application_literature_coverage(
+                application="Pane",
+                ingredient_names=["White rice flour", "Corn starch", "HPMC (Hydroxypropyl Methylcellulose)"],
+                blend_values={
+                    "protein_pct": 7.0,
+                    "starch_pct": 78.0,
+                    "fat_pct": 1.0,
+                    "fiber_pct": 2.0,
+                    "water_absorption": 1.8,
+                    "viscosity_index": 2.0,
+                    "hydrocolloid_pct": 0.02,
+                    "amylose_pct": 22.0,
+                },
+                process_values={
+                    "hydration_pct": 100.0,
+                    "baking_temp_c": 190.0,
+                    "baking_time_min": 35.0,
+                    "tg_pct": 0.0,
+                },
+                db=session,
+            )
+        finally:
+            session.close()
+
+        assert assessment.level in {"medium", "high"}
+        assert assessment.mechanism_coverage == 1.0
+        assert assessment.calibration_coverage >= 0.75
 
     def test_report_markdown(self):
         session = _seeded_session()

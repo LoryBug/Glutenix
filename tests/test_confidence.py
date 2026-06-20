@@ -77,3 +77,31 @@ class TestCandidateConfidence:
         assert confidence.score < 0.7
         assert any("Literature coverage/OOD confidence: low" in note for note in confidence.basis)
         assert any("hydration_pct" in flag for flag in confidence.risk_flags)
+
+    def test_low_literature_mechanism_caps_candidate_confidence(self):
+        profile = get_sweep_target_profile("Pane")
+
+        confidence = assess_candidate_confidence(
+            blend_values={
+                "water_absorption": 1.8,
+                "viscosity_index": 2.0,
+                "hydrocolloid_pct": 0.02,
+                "protein_pct": 8.0,
+            },
+            profile=profile,
+            process_score=0.9,
+            blend_score=0.9,
+            flavor_score=0.9,
+            literature_coverage={
+                "score": 0.8,
+                "level": "medium",
+                "mechanism_coverage": 0.0,
+                "calibration_coverage": 0.25,
+                "basis": ["TG mechanism is unmodeled."],
+                "risk_flags": ["tg_pct uses an unmodeled enzyme mechanism."],
+            },
+        )
+
+        assert confidence.level == "low"
+        assert any("mechanism=0.00" in note for note in confidence.basis)
+        assert any("tg_pct" in flag for flag in confidence.risk_flags)
