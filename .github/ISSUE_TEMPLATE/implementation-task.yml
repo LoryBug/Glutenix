@@ -1,0 +1,61 @@
+name: Implementation task
+description: Concrete feature task suitable for a smaller implementation model.
+title: "Feature: "
+labels: ["type: feature"]
+body:
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue
+      description: Link the parent planning issue.
+      placeholder: "#123"
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: Concrete output expected from this task.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why this task exists and how it fits the parent plan.
+    validations:
+      required: true
+  - type: textarea
+    id: implementation-notes
+    attributes:
+      label: Implementation notes
+      description: Suggested files, functions, data, APIs, or approach.
+      placeholder: Keep this specific enough that another model can start safely.
+    validations:
+      required: true
+  - type: textarea
+    id: watch-out
+    attributes:
+      label: Watch out
+      description: Risks, edge cases, things not to break, data caveats.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Verifiable checklist.
+      value: |
+        - [ ] TODO
+        - [ ] Tests cover the intended behavior.
+        - [ ] Docs are updated if behavior or evidence changes.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: Commands or manual checks expected before review.
+      value: |
+        - [ ] `uv run pytest -q`
+        - [ ] `npm run build` if frontend or API contracts affect frontend
+    validations:
+      required: true

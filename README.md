@@ -329,8 +329,12 @@ The project currently has automated tests for:
 Recent full validation:
 
 ```text
-105 passed
+118 passed
 ```
+
+## Development Workflow
+
+Planning, issue templates, branch/PR conventions, review expectations, and ADR guidance are documented in `docs/development-workflow.md`.
 
 ## Project Philosophy
 

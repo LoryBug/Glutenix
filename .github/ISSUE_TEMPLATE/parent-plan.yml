@@ -1,0 +1,53 @@
+name: Parent plan
+description: High-level planning issue for a feature area or milestone.
+title: "Plan: "
+labels: ["type: plan"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true when this plan is complete?
+      placeholder: Describe the outcome, not the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Why this matters for Glutenix scientifically, technically, or product-wise.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: What should explicitly stay out of scope?
+      placeholder: List boundaries to avoid scope creep.
+  - type: textarea
+    id: proposed-breakdown
+    attributes:
+      label: Proposed breakdown
+      description: Sub-issues to create after the plan is approved.
+      value: |
+        1. TODO
+        2. TODO
+        3. TODO
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and tradeoffs
+      description: Main technical, scientific, data, or UX risks.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Completion criteria
+      description: How do we know the parent plan is done?
+      value: |
+        - [ ] Sub-issues are completed or explicitly deferred.
+        - [ ] Relevant docs/evidence notes are updated.
+        - [ ] Final review confirms the system does what the plan intended.
+    validations:
+      required: true

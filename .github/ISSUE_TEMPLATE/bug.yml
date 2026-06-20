@@ -1,0 +1,29 @@
+name: Bug report
+description: Reproducible bug, regression, or incorrect behavior.
+title: "Bug: "
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      value: |
+        1. TODO
+        2. TODO
+        3. TODO
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes, suspected area, or logs

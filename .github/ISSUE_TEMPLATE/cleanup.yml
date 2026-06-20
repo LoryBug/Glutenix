@@ -1,0 +1,34 @@
+name: Cleanup
+description: Refactor, documentation cleanup, or quality pass after accumulated feature work.
+title: "Cleanup: "
+labels: ["type: cleanup"]
+body:
+  - type: textarea
+    id: trigger
+    attributes:
+      label: Trigger
+      description: What accumulated pain or risk justifies this cleanup?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What can be changed, and what must stay behaviorally stable?
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Candidate tasks
+      value: |
+        - [ ] TODO
+        - [ ] TODO
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      value: |
+        - [ ] `uv run pytest -q`
+        - [ ] `npm run build`
+        - [ ] Review confirms no intended behavior changed unless documented.
