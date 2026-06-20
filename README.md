@@ -191,6 +191,14 @@ Current bread sources include:
 
 Important limitation: the linear correction in calibration reports is diagnostic only. It is not treated as production calibration.
 
+Generated calibration-report sections can be refreshed with:
+
+```bash
+uv run python scripts/update_calibration_reports.py --write
+```
+
+Use `--check` in validation to fail when generated report tables are stale.
+
 Useful files:
 
 - `data/literature/pasta_cooking.jsonl`
