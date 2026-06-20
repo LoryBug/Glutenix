@@ -53,12 +53,27 @@ class TestLiteratureCalibration:
             required_process_fields=("hydration_pct", "baking_time_min"),
         )
 
-        assert summary["record_count"] == 21
+        assert summary["record_count"] == 33
         assert summary["applications"] == ["Pane"]
-        assert summary["source_count"] == 4
+        assert summary["source_count"] == 6
         assert "specific_volume_cm3_g" in summary["metrics"]
         assert "crumb_hardness_n" in summary["metrics"]
         assert "porosity_pct" in summary["metrics"]
+
+        records = load_literature_records(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=(),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
+        belorio_records = [record for record in records if record.id.startswith("belorio_2020_")]
+        assert len(belorio_records) == 6
+        assert all("specific_volume_cm3_g" in record.measured for record in belorio_records)
+        assert all("crumb_hardness_n" in record.measured for record in belorio_records)
+
+        wojcik_records = [record for record in records if record.id.startswith("wojcik_2021_")]
+        assert len(wojcik_records) == 6
+        assert all("specific_volume_cm3_g" in record.measured for record in wojcik_records)
+        assert all("crumb_hardness_n" in record.measured for record in wojcik_records)
 
     def test_compare_pasta_cooking_records(self):
         session = _seeded_session()
@@ -101,19 +116,19 @@ class TestLiteratureCalibration:
         finally:
             session.close()
 
-        assert result["n_records"] == 21
-        assert result["source_count"] == 4
+        assert result["n_records"] == 33
+        assert result["source_count"] == 6
         assert result["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in result["metric_summaries"]
         assert "crumb_hardness_n" in result["metric_summaries"]
         assert "porosity_pct" in result["metric_summaries"]
         assert result["record_groups"]["process_family"] == {
             "commercial_mix_bread": 4,
-            "hydrocolloid_bread": 6,
+            "hydrocolloid_bread": 13,
             "millet_cultivar_bread": 9,
-            "protein_enriched_bread": 2,
+            "protein_enriched_bread": 7,
         }
-        assert len(result["rows"]) == 21
+        assert len(result["rows"]) == 33
         assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
 
     def test_literature_coverage_summary(self):
@@ -125,8 +140,8 @@ class TestLiteratureCalibration:
 
         assert set(result["domains"]) == {"pasta_cooking", "bread_baking"}
         bread = result["domains"]["bread_baking"]
-        assert bread["record_count"] == 21
-        assert bread["source_count"] == 4
+        assert bread["record_count"] == 33
+        assert bread["source_count"] == 6
         assert "hydration_pct" in bread["process_ranges"]
         assert "hydrocolloid_bread" in bread["process_families"]
         assert "HPMC (Hydroxypropyl Methylcellulose)" in bread["covered_ingredients"]

@@ -412,9 +412,9 @@ def _bread_process_family(record: LiteratureRecord) -> str:
         return "commercial_mix_bread"
     if "millet" in formula_names:
         return "millet_cultivar_bread"
-    if "chickpea" in formula_names or "whey" in formula_names:
+    if "chickpea" in formula_names or "whey" in formula_names or "pea protein" in formula_names:
         return "protein_enriched_bread"
-    if any(name in formula_names for name in ("hpmc", "xanthan", "guar")):
+    if any(name in formula_names for name in ("hpmc", "xanthan", "guar", "psyllium")):
         return "hydrocolloid_bread"
     return "generic_gluten_free_bread"
 

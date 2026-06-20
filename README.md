@@ -174,8 +174,8 @@ Current sources include:
 
 Current bread baking diagnostic dataset:
 
-- 21 records.
-- 4 peer-reviewed sources.
+- 33 records.
+- 6 peer-reviewed sources.
 - Main metric: `specific_volume_cm3_g`.
 - Auxiliary metrics include limited crumb hardness, porosity, moisture, water activity, and structure fields where available.
 
@@ -329,7 +329,7 @@ The project currently has automated tests for:
 Recent full validation:
 
 ```text
-118 passed
+117 passed
 ```
 
 ## Development Workflow
