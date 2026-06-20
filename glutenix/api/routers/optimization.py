@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Any
 
@@ -15,6 +16,7 @@ from glutenix.calibration.coverage import (
 from glutenix.db.models import Application, Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
+from glutenix.engine.bread import BreadQualityParams, BreadQualityResult, BreadQualitySimulator
 from glutenix.engine.confidence import (
     assess_candidate_confidence,
     serialize_candidate_confidence,
@@ -176,6 +178,7 @@ class ApplicationBlendCandidate(BaseModel):
     properties: dict[str, float]
     flavor_profile: dict[str, float]
     cooking_metrics: dict[str, Any] | None = None
+    bread_metrics: dict[str, Any] | None = None
     model_confidence: CandidateConfidenceResponse
     volume_increase_pct: float
     core_temp_c: float
@@ -238,6 +241,26 @@ def _blend_values(props) -> dict[str, float]:
     }
 
 
+def _serialize_bread_metrics(result: BreadQualityResult) -> dict[str, Any]:
+    return {
+        "specific_volume_cm3_g": result.specific_volume_cm3_g,
+        "crumb_hardness_n": result.crumb_hardness_n,
+        "porosity_pct": result.porosity_pct,
+        "process_family": result.process_family,
+        "calibration_confidence": result.calibration_confidence,
+        "calibration_score": result.calibration_score,
+        "calibration_notes": result.calibration_notes,
+    }
+
+
+def _score_bread_quality(result: BreadQualityResult, profile) -> float:
+    volume_score = math.exp(-0.5 * ((result.specific_volume_cm3_g - 2.5) / 0.6) ** 2)
+    core_target = profile.core_target_c or 96.0
+    core_score = math.exp(-0.5 * ((result.core_temp_c - core_target) / profile.core_sigma_c) ** 2)
+    crust_score = math.exp(-0.5 * ((result.crust_temp_c - profile.crust_target_c) / profile.crust_sigma_c) ** 2)
+    return float(0.45 * volume_score + 0.35 * core_score + 0.20 * crust_score)
+
+
 @router.post("/application-suggest", response_model=ApplicationSuggestResponse)
 def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depends(get_db)):
     application = db.query(Application).filter(Application.id == body.application_id).first()
@@ -258,6 +281,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
     profile = get_sweep_target_profile(application.name)
     flavor_target = get_flavor_target(application.name)
     is_pasta = application.name.strip().lower() == "pasta fresca"
+    is_bread = application.name.strip().lower() == "pane"
     weight_sum = body.w_process + body.w_blend + body.w_flavor
     if weight_sum <= 0:
         raise HTTPException(400, detail="At least one score weight must be positive")
@@ -296,6 +320,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
         blend_props = calc.calculate(blend_data)
 
         cooking_metrics = None
+        bread_metrics = None
         if is_pasta:
             best_cooking = None
             best_point = None
@@ -338,6 +363,38 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             volume_pct = 0.0
             core_temp = best_cooking.core_temp_c
             crust_temp = best_point["baking_temp_c"]
+        elif is_bread:
+            best_bread = None
+            best_point = None
+            best_score = -1.0
+            for point in process_points:
+                bread = BreadQualitySimulator(
+                    BreadQualityParams(
+                        fermentation_temp_c=point["fermentation_temp_c"],
+                        fermentation_time_min=point["fermentation_duration_min"],
+                        baking_temp_c=point["baking_temp_c"],
+                        baking_time_min=point["baking_duration_min"],
+                    )
+                ).simulate(blend_props)
+                candidate_score = _score_bread_quality(bread, profile)
+                if best_bread is None or candidate_score > best_score:
+                    best_bread = bread
+                    best_point = point
+                    best_score = candidate_score
+            if best_bread is None or best_point is None:
+                continue
+            process_score = best_score
+            process_data = best_point
+            bread_metrics = _serialize_bread_metrics(best_bread)
+            fermentation = FermentationSimulator(
+                FermentationParams(temp_c=best_point["fermentation_temp_c"])
+            ).simulate(
+                viscosity_index=blend_props.viscosity_index,
+                duration_min=best_point["fermentation_duration_min"],
+            )
+            volume_pct = round(fermentation.final_volume_increase * 100, 2)
+            core_temp = best_bread.core_temp_c
+            crust_temp = best_bread.crust_temp_c
         else:
             sweep = sweeper.run_sweep(
                 blend_props,
@@ -383,6 +440,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             blend_score=blend_score,
             flavor_score=flavor_score,
             cooking_metrics=cooking_metrics,
+            bread_metrics=bread_metrics,
             literature_coverage=literature_coverage,
         ))
 
@@ -399,6 +457,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             core_temp,
             crust_temp,
             cooking_metrics,
+            bread_metrics,
             model_confidence,
         ))
 
@@ -423,6 +482,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 properties={key: round(value, 4) for key, value in _blend_values(blend_props).items()},
                 flavor_profile=flavor_profile,
                 cooking_metrics=cooking_metrics,
+                bread_metrics=bread_metrics,
                 model_confidence=model_confidence,
                 volume_increase_pct=volume_pct,
                 core_temp_c=core_temp,
@@ -441,6 +501,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 core_temp,
                 crust_temp,
                 cooking_metrics,
+                bread_metrics,
                 model_confidence,
             )
             in enumerate(candidates[:body.n_candidates], start=1)

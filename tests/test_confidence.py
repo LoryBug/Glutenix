@@ -105,3 +105,29 @@ class TestCandidateConfidence:
         assert confidence.level == "low"
         assert any("mechanism=0.00" in note for note in confidence.basis)
         assert any("tg_pct" in flag for flag in confidence.risk_flags)
+
+    def test_uses_bread_calibration_score(self):
+        profile = get_sweep_target_profile("Pane")
+
+        confidence = assess_candidate_confidence(
+            blend_values={
+                "water_absorption": 1.8,
+                "viscosity_index": 2.0,
+                "hydrocolloid_pct": 0.02,
+                "protein_pct": 8.0,
+                "fiber_pct": 4.0,
+            },
+            profile=profile,
+            process_score=0.8,
+            blend_score=0.8,
+            flavor_score=0.8,
+            bread_metrics={
+                "calibration_score": 0.55,
+                "calibration_confidence": "medium",
+                "process_family": "hydrocolloid_bread",
+                "calibration_notes": [],
+            },
+        )
+
+        assert any("Bread quality model" in note for note in confidence.basis)
+        assert not any("No direct experimental calibration" in flag for flag in confidence.risk_flags)

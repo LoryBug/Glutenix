@@ -363,6 +363,31 @@ class TestOptimizeSuggest:
         assert 0 <= candidate["model_confidence"]["score"] <= 1
         assert candidate["model_confidence"]["level"] in {"low", "medium", "high"}
 
+    def test_application_suggest_pane_uses_bread_quality(self):
+        resp = client.post("/optimize/application-suggest", json={
+            "application_id": 2,
+            "ingredients": [
+                {"ingredient_id": 1, "min_proportion": 0.45, "max_proportion": 0.75},
+                {"ingredient_id": 12, "min_proportion": 0.20, "max_proportion": 0.50},
+                {"ingredient_id": 17, "min_proportion": 0.01, "max_proportion": 0.03},
+            ],
+            "n_candidates": 3,
+            "n_blend_samples": 12,
+            "n_process_samples": 5,
+            "seed": 101,
+        })
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["application"] == "Pane"
+        assert len(data["candidates"]) == 3
+        for candidate in data["candidates"]:
+            assert candidate["cooking_metrics"] is None
+            assert candidate["bread_metrics"] is not None
+            assert candidate["bread_metrics"]["specific_volume_cm3_g"] > 0
+            assert "calibration_score" in candidate["bread_metrics"]
+            assert any("Bread quality model" in note for note in candidate["model_confidence"]["basis"])
+            assert not any("No direct experimental calibration" in flag for flag in candidate["model_confidence"]["risk_flags"])
+
 
 class TestExperiments:
     def test_crud(self):
