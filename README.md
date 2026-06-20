@@ -144,6 +144,14 @@ It combines:
 
 The goal is not to output a magic recipe. The goal is to produce a ranked shortlist of candidates worth testing.
 
+For quick bread experiments without starting the API, use the slim CLI:
+
+```bash
+uv run glutenix rank-pane --preset sorghum-baseline --blend-samples 100 --process-samples 20 --top 10 --seed 42
+```
+
+Available presets include `sorghum-baseline`, `bobs-inspired`, `schaer-inspired`, `freee-inspired`, and `quinoa-hpmc`. Add `--csv results.csv` or `--json results.json` for machine-readable output.
+
 ### Bayesian Optimization And GPR
 
 The project includes Gaussian Process Regression and Bayesian Optimization components so that real experimental results can eventually guide future suggestions.
