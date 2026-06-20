@@ -63,6 +63,8 @@ class CoverageAssessment:
     ingredient_coverage: float
     blend_property_coverage: float
     process_coverage: float
+    mechanism_coverage: float = 1.0
+    calibration_coverage: float = 1.0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -73,6 +75,8 @@ class CoverageAssessment:
             "ingredient_coverage": round(self.ingredient_coverage, 4),
             "blend_property_coverage": round(self.blend_property_coverage, 4),
             "process_coverage": round(self.process_coverage, 4),
+            "mechanism_coverage": round(self.mechanism_coverage, 4),
+            "calibration_coverage": round(self.calibration_coverage, 4),
         }
 
 
@@ -155,6 +159,8 @@ def assess_application_literature_coverage(
             ingredient_coverage=0.0,
             blend_property_coverage=0.0,
             process_coverage=0.0,
+            mechanism_coverage=0.0,
+            calibration_coverage=0.0,
         )
 
     summary = build_domain_coverage(db, domain)
@@ -184,6 +190,8 @@ def assess_literature_coverage(
             ingredient_coverage=0.0,
             blend_property_coverage=0.0,
             process_coverage=0.0,
+            mechanism_coverage=0.0,
+            calibration_coverage=0.0,
         )
 
     basis: list[str] = []
@@ -205,12 +213,25 @@ def assess_literature_coverage(
         risk_flags=risk_flags,
     )
 
-    if summary.domain == "bread_baking" and float(process_values.get("tg_pct", 0.0)) > 0:
-        basis.append("Microbial transglutaminase appears in bread literature coverage, but enzyme effects are not modeled yet.")
-        risk_flags.append("tg_pct uses an unmodeled enzyme mechanism; treat bread quality predictions as mechanism-OOD.")
+    mechanism_score, calibration_score = _mechanism_calibration_coverage(
+        summary=summary,
+        ingredient_names=ingredient_names,
+        process_values=process_values,
+        basis=basis,
+        risk_flags=risk_flags,
+    )
 
-    score = round(0.35 * ingredient_score + 0.35 * blend_score + 0.30 * process_score, 4)
-    if score >= 0.75 and not risk_flags:
+    score = round(
+        0.25 * ingredient_score
+        + 0.25 * blend_score
+        + 0.20 * process_score
+        + 0.15 * mechanism_score
+        + 0.15 * calibration_score,
+        4,
+    )
+    if mechanism_score < 0.5 or calibration_score < 0.5:
+        level = "low"
+    elif score >= 0.75 and not risk_flags:
         level = "high"
     elif score >= 0.5:
         level = "medium"
@@ -228,7 +249,40 @@ def assess_literature_coverage(
         ingredient_coverage=ingredient_score,
         blend_property_coverage=blend_score,
         process_coverage=process_score,
+        mechanism_coverage=mechanism_score,
+        calibration_coverage=calibration_score,
     )
+
+
+def _mechanism_calibration_coverage(
+    *,
+    summary: LiteratureCoverageSummary,
+    ingredient_names: list[str],
+    process_values: dict[str, float],
+    basis: list[str],
+    risk_flags: list[str],
+) -> tuple[float, float]:
+    if summary.domain != "bread_baking":
+        return 1.0, 1.0
+
+    names = " ".join(ingredient_names).lower()
+    tg_pct = float(process_values.get("tg_pct", 0.0))
+    if tg_pct > 0:
+        basis.append("Microbial transglutaminase appears in bread literature coverage, but enzyme effects are not modeled yet.")
+        risk_flags.append("tg_pct uses an unmodeled enzyme mechanism; treat bread quality predictions as mechanism-OOD.")
+        return 0.0, 0.25
+
+    if "quinoa" in names:
+        basis.append("Quinoa bread coverage is currently sparse outside the Ghodosipoor enzyme/HPMC study.")
+        risk_flags.append("Quinoa flour has sparse non-enzyme bread calibration; treat predictions as low confidence.")
+        return 1.0, 0.35
+
+    if any(token in names for token in ("hpmc", "xanthan", "guar", "psyllium")):
+        basis.append("Plain hydrocolloid bread has multiple non-enzyme literature sources, but family-specific errors remain.")
+        return 1.0, 0.75
+
+    basis.append("No mechanism-specific bread calibration adjustment was applied.")
+    return 1.0, 0.6
 
 
 def domain_for_application(application: str) -> str | None:

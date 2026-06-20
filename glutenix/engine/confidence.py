@@ -39,10 +39,21 @@ def assess_candidate_confidence(
         cooking_confidence = 0.45
         risk_flags.append("No direct experimental calibration attached to this application model yet.")
 
+    literature_level = None
+    literature_mechanism = 1.0
+    literature_calibration = 1.0
     if literature_coverage is not None:
         literature_confidence = max(0.0, min(float(literature_coverage.get("score", 0.25)), 1.0))
-        level = literature_coverage.get("level", "unknown")
-        basis.append(f"Literature coverage/OOD confidence: {level}.")
+        literature_level = str(literature_coverage.get("level", "unknown"))
+        literature_mechanism = float(literature_coverage.get("mechanism_coverage", 1.0))
+        literature_calibration = float(literature_coverage.get("calibration_coverage", 1.0))
+        basis.append(f"Literature coverage/OOD confidence: {literature_level}.")
+        basis.append(
+            "Literature coverage components: "
+            f"range={literature_confidence:.2f}, "
+            f"mechanism={literature_mechanism:.2f}, "
+            f"calibration={literature_calibration:.2f}."
+        )
         basis.extend(str(item) for item in literature_coverage.get("basis", []))
         risk_flags.extend(str(item) for item in literature_coverage.get("risk_flags", []))
     else:
@@ -67,7 +78,9 @@ def assess_candidate_confidence(
         )
     score = round(max(0.0, min(score, 1.0)), 4)
 
-    if score >= 0.75 and len(risk_flags) <= 2:
+    if literature_level == "low" or literature_mechanism < 0.5 or literature_calibration < 0.5:
+        level = "low"
+    elif score >= 0.75 and len(risk_flags) <= 2:
         level = "high"
     elif score >= 0.50:
         level = "medium"

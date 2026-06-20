@@ -39,7 +39,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | `PastaCookingSimulator` | `calibrated` | 40 records from 3 pasta papers | Limited texture validation and only 3 sources |
 | `FlavorModel` | `heuristic` | Literature-informed sensory proxy | No measured sensory panel calibration |
 | `ApplicationSuggest` | `heuristic + confidence` | Target profiles, process scores, flavor score, pasta calibration where available | Needs domain calibration beyond pasta |
-| `ModelConfidence` | `initial + OOD` | Blend target range fit, score bands, pasta calibration score, literature-derived coverage ranges | Needs richer coverage distances and source-specific uncertainty |
+| `ModelConfidence` | `initial + OOD` | Blend target range fit, score bands, pasta calibration score, literature-derived coverage ranges plus bread mechanism/calibration reliability | Needs richer coverage distances and source-specific uncertainty |
 
 ## Application Evidence Details
 
@@ -149,6 +149,7 @@ Current limitations:
 - Specific volume is the only broadly covered metric.
 - Crumb hardness has 26 structured records across five sources.
 - Porosity has 20 structured records across three sources (Kahraman 2022, Bianchi 2026, Parsamajd 2025), but values may depend strongly on image-analysis method.
+- Bread coverage confidence now separates range coverage from mechanism/calibration reliability; TG/enzyme and sparse quinoa cases are downgraded even when numeric ranges pass.
 - Commercial bread mix records are aggregate-mapped because internal proportions are not disclosed.
 - Millet cultivar records share a generic `Millet flour` mapping, so cultivar-specific starch functionality is simplified.
 - No independent train/test split is meaningful yet.
