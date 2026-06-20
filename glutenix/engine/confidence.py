@@ -20,6 +20,7 @@ def assess_candidate_confidence(
     blend_score: float,
     flavor_score: float,
     cooking_metrics: dict | None = None,
+    bread_metrics: dict | None = None,
     literature_coverage: dict[str, Any] | None = None,
 ) -> CandidateConfidence:
     basis: list[str] = []
@@ -35,6 +36,13 @@ def assess_candidate_confidence(
         cooking_confidence = max(0.0, min(calibration_score, 1.0))
         confidence = cooking_metrics.get("calibration_confidence", "unknown")
         basis.append(f"Pasta cooking model calibration confidence: {confidence}.")
+    elif bread_metrics is not None:
+        calibration_score = float(bread_metrics.get("calibration_score", 0.25))
+        cooking_confidence = max(0.0, min(calibration_score, 1.0))
+        confidence = bread_metrics.get("calibration_confidence", "unknown")
+        family = bread_metrics.get("process_family", "unknown")
+        basis.append(f"Bread quality model calibration confidence: {confidence} ({family}).")
+        risk_flags.extend(str(item) for item in bread_metrics.get("calibration_notes", []))
     else:
         cooking_confidence = 0.45
         risk_flags.append("No direct experimental calibration attached to this application model yet.")
