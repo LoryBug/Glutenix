@@ -23,19 +23,23 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from glutenix.calibration.literature import (
+    DEFAULT_BREAD_DATASET,
+    DEFAULT_PASTA_DATASET,
     LiteratureRecord,
+    _bread_process_family,
     _blend_data_from_record,
     _record_bread_params,
     _record_cooking_params,
     _source_label,
     load_literature_records,
-    _bread_process_family,
 )
 from glutenix.engine.blend import BlendCalculator, BlendProperties
-from glutenix.engine.bread import BreadQualityParams, BreadQualitySimulator
-from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
+from glutenix.engine.bread import BreadQualitySimulator
+from glutenix.engine.cooking import PastaCookingSimulator
 
 logger = structlog.get_logger("glutenix.ml.residual")
 
@@ -133,6 +137,9 @@ PASTA_PROCESS_FEATURES = [
     "calcium_bath_time_min",
     "dough_heat_temp_c",
     "dough_heat_time_min",
+    "dried_pasta",
+    "water_to_flour_ratio",
+    "extrusion_moisture_pct",
 ]
 
 
@@ -270,7 +277,7 @@ def build_bread_dataset(db_session, records: list[LiteratureRecord] | None = Non
     """Build full bread feature matrix and targets for all metrics."""
     if records is None:
         records = load_literature_records(
-            "data/literature/bread_baking.jsonl",
+            DEFAULT_BREAD_DATASET,
             required_measured_metrics=(),
             required_process_fields=("hydration_pct", "baking_time_min"),
         )
@@ -281,7 +288,6 @@ def build_bread_dataset(db_session, records: list[LiteratureRecord] | None = Non
         if row is not None:
             rows.append(row)
 
-    n_feat = len(rows[0]["features"]) if rows else 0
     X = np.array([r["features"] for r in rows])
 
     metric_keys = ["specific_volume_cm3_g", "crumb_hardness_n", "porosity_pct"]
@@ -318,7 +324,7 @@ def build_bread_dataset(db_session, records: list[LiteratureRecord] | None = Non
 def build_pasta_dataset(db_session, records: list[LiteratureRecord] | None = None) -> dict[str, Any]:
     """Build full pasta feature matrix and residual targets."""
     if records is None:
-        records = load_literature_records()
+        records = load_literature_records(DEFAULT_PASTA_DATASET)
     calc = BlendCalculator()
     rows = []
     for record in records:
@@ -380,7 +386,7 @@ def _run_cv_benchmark(
     for train_idx, test_idx in logo.split(X, y_true, groups=groups):
         source_held_out = sources[test_idx[0]]
         X_tr, X_te = X[train_idx], X[test_idx]
-        res_tr, res_te = residues[train_idx], residues[test_idx]
+        res_tr = residues[train_idx]
         y_te = y_true[test_idx]
         y_sim_te = y_sim[test_idx]
 
@@ -394,9 +400,9 @@ def _run_cv_benchmark(
         )
 
         if len(train_idx) >= 5:
-            ridge_m = Ridge(alpha=1.0, random_state=RANDOM_SEED)
+            ridge_m = make_pipeline(StandardScaler(), Ridge(alpha=1.0, random_state=RANDOM_SEED))
             if ridge_kwargs:
-                ridge_m = Ridge(**ridge_kwargs)
+                ridge_m = make_pipeline(StandardScaler(), Ridge(**ridge_kwargs))
             ridge_m.fit(X_tr, res_tr)
             ridge_res = ridge_m.predict(X_te)
             ridge_preds[test_idx] = y_sim_te + ridge_res

@@ -10,8 +10,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import sys
-from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -23,7 +21,6 @@ from glutenix.db.base import Base
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 from glutenix.ml.residual import (
     BenchmarkResult,
-    SourceFoldResult,
     benchmark_bread,
     benchmark_pasta,
 )
@@ -33,12 +30,6 @@ REPORT_PATH = PROJECT_ROOT / "docs" / "ml-residual-benchmark.md"
 
 REPORT_START = "<!-- generated-start: ml-residual-benchmark -->"
 REPORT_END = "<!-- generated-end: ml-residual-benchmark -->"
-
-
-@dataclass
-class Section:
-    title: str
-    content: list[str]
 
 
 def _seeded_session() -> Session:
@@ -69,7 +60,7 @@ def _format_metrics(m: Any) -> str:
 
 def _metric_row(
     domain: str, metric: str, result: BenchmarkResult | None
-) -> list[str] | None:
+) -> str | None:
     if result is None:
         return None
     row = (
