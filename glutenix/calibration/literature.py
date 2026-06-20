@@ -402,12 +402,18 @@ def _record_bread_params(record: LiteratureRecord) -> BreadQualityParams:
         fat_pct=float(record.process.get("fat_pct", 0.0)),
         chemical_leavening_pct=float(record.process.get("chemical_leavening_pct", 0.0)),
         emulsifier_pct=float(record.process.get("emulsifier_pct", 0.0)),
+        tg_pct=float(record.process.get("tg_pct", 0.0)),
         storage_days=float(record.process.get("storage_days", 1.0)),
     )
 
 
 def _bread_process_family(record: LiteratureRecord) -> str:
     formula_names = " ".join(record.mapped_formula).lower()
+    tg_pct = float(record.process.get("tg_pct", 0.0))
+    if tg_pct > 0 and any(name in formula_names for name in ("hpmc", "xanthan", "guar", "psyllium")):
+        return "enzyme_hydrocolloid_bread"
+    if tg_pct > 0:
+        return "enzyme_bread"
     if "commercial gluten-free bread mix" in formula_names:
         return "commercial_mix_bread"
     if "millet" in formula_names:

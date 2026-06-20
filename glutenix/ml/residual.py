@@ -126,6 +126,7 @@ BREAD_PROCESS_FEATURES = [
     "fat_pct",
     "chemical_leavening_pct",
     "emulsifier_pct",
+    "tg_pct",
     "storage_days",
 ]
 
@@ -160,6 +161,7 @@ def _extract_bread_process(record: LiteratureRecord) -> list[float]:
         float(p.get("fat_pct", 0.0)),
         float(p.get("chemical_leavening_pct", 0.0)),
         float(p.get("emulsifier_pct", 0.0)),
+        float(p.get("tg_pct", 0.0)),
         float(p.get("storage_days", 1.0)),
     ]
 

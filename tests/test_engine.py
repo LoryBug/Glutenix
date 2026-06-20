@@ -505,6 +505,26 @@ class TestBreadQualitySimulator:
         assert result.process_family == "hydrocolloid_bread"
         assert result.calibration_confidence == "medium"
 
+    def test_tg_hydrocolloid_bread_is_mechanism_ood(self):
+        props = BlendProperties(
+            protein_pct=14.0,
+            starch_pct=58.0,
+            water_absorption=1.7,
+            viscosity_index=2.0,
+            hydrocolloid_pct=0.01,
+            amylose_pct=11.0,
+            ingredients_detail=[
+                {"name": "Quinoa flour", "proportion": 0.99, "category": "flour"},
+                {"name": "HPMC (Hydroxypropyl Methylcellulose)", "proportion": 0.01, "category": "hydrocolloid"},
+            ],
+        )
+
+        result = BreadQualitySimulator(BreadQualityParams(tg_pct=0.75)).simulate(props)
+
+        assert result.process_family == "enzyme_hydrocolloid_bread"
+        assert result.calibration_confidence == "low"
+        assert any("transglutaminase" in note.lower() for note in result.calibration_notes)
+
     def test_rejects_invalid_params(self):
         import pytest
 
@@ -513,3 +533,5 @@ class TestBreadQualitySimulator:
             BreadQualitySimulator(BreadQualityParams(hydration_pct=0)).simulate(props)
         with pytest.raises(ValueError):
             BreadQualitySimulator(BreadQualityParams(baking_time_min=0)).simulate(props)
+        with pytest.raises(ValueError):
+            BreadQualitySimulator(BreadQualityParams(tg_pct=-0.1)).simulate(props)

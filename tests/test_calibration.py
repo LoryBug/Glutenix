@@ -124,8 +124,10 @@ class TestLiteratureCalibration:
         assert "porosity_pct" in result["metric_summaries"]
         assert result["record_groups"]["process_family"] == {
             "commercial_mix_bread": 4,
-            "generic_gluten_free_bread": 2,
-            "hydrocolloid_bread": 29,
+            "enzyme_bread": 1,
+            "enzyme_hydrocolloid_bread": 12,
+            "generic_gluten_free_bread": 1,
+            "hydrocolloid_bread": 17,
             "millet_cultivar_bread": 9,
             "protein_enriched_bread": 16,
         }
@@ -144,7 +146,9 @@ class TestLiteratureCalibration:
         assert bread["record_count"] == 60
         assert bread["source_count"] == 9
         assert "hydration_pct" in bread["process_ranges"]
+        assert "tg_pct" in bread["process_ranges"]
         assert "hydrocolloid_bread" in bread["process_families"]
+        assert "enzyme_hydrocolloid_bread" in bread["process_families"]
         assert "HPMC (Hydroxypropyl Methylcellulose)" in bread["covered_ingredients"]
 
     def test_literature_coverage_assessment_flags_ood(self):
@@ -177,6 +181,36 @@ class TestLiteratureCalibration:
         assert assessment.risk_flags
         assert any("Potato starch" in flag for flag in assessment.risk_flags)
         assert any("hydration_pct" in flag for flag in assessment.risk_flags)
+
+    def test_literature_coverage_assessment_flags_tg_mechanism_ood(self):
+        session = _seeded_session()
+        try:
+            assessment = assess_application_literature_coverage(
+                application="Pane",
+                ingredient_names=["Quinoa flour", "HPMC (Hydroxypropyl Methylcellulose)"],
+                blend_values={
+                    "protein_pct": 14.0,
+                    "starch_pct": 58.0,
+                    "fat_pct": 6.0,
+                    "fiber_pct": 6.0,
+                    "water_absorption": 1.8,
+                    "viscosity_index": 2.0,
+                    "hydrocolloid_pct": 0.01,
+                    "amylose_pct": 11.0,
+                },
+                process_values={
+                    "hydration_pct": 90.0,
+                    "baking_temp_c": 170.0,
+                    "baking_time_min": 25.0,
+                    "tg_pct": 0.75,
+                },
+                db=session,
+            )
+        finally:
+            session.close()
+
+        assert assessment.level in {"low", "medium"}
+        assert any("tg_pct" in flag for flag in assessment.risk_flags)
 
     def test_report_markdown(self):
         session = _seeded_session()

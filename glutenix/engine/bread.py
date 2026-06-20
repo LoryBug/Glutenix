@@ -20,6 +20,7 @@ class BreadQualityParams:
     fat_pct: float = 0.0
     chemical_leavening_pct: float = 0.0
     emulsifier_pct: float = 0.0
+    tg_pct: float = 0.0
     storage_days: float = 1.0
 
 
@@ -72,8 +73,8 @@ class BreadQualitySimulator:
             raise ValueError("baking_time_min must be positive")
         if p.dough_thickness_cm <= 0:
             raise ValueError("dough_thickness_cm must be positive")
-        if p.yeast_pct < 0 or p.sugar_pct < 0 or p.fat_pct < 0:
-            raise ValueError("yeast_pct, sugar_pct, and fat_pct must be non-negative")
+        if p.yeast_pct < 0 or p.sugar_pct < 0 or p.fat_pct < 0 or p.tg_pct < 0:
+            raise ValueError("yeast_pct, sugar_pct, fat_pct, and tg_pct must be non-negative")
 
         fermentation = FermentationSimulator(
             FermentationParams(
@@ -199,7 +200,15 @@ class BreadQualitySimulator:
         ))
 
         notes: list[str] = []
-        if commercial_mix > 0.5:
+        if p.tg_pct > 0 and hpmc + guar + xanthan > 0:
+            process_family = "enzyme_hydrocolloid_bread"
+            calibration_score = 0.3
+            notes.append("Microbial transglutaminase is present, but enzyme-driven bread structure is not modeled yet.")
+        elif p.tg_pct > 0:
+            process_family = "enzyme_bread"
+            calibration_score = 0.25
+            notes.append("Microbial transglutaminase is present, but enzyme-driven bread structure is not modeled yet.")
+        elif commercial_mix > 0.5:
             process_family = "commercial_mix_bread"
             calibration_score = 0.55
             notes.append("Commercial gluten-free bread mix is represented as an approximate aggregate ingredient.")
