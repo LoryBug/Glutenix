@@ -7,6 +7,7 @@ from glutenix.db.base import Base
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 from glutenix.ml.residual import (
     BenchmarkMetrics,
+    BREAD_PROCESS_FEATURES,
     build_bread_dataset,
     build_pasta_dataset,
     benchmark_bread,
@@ -38,6 +39,7 @@ class TestResidualDataset:
             assert vol_data["y_true"].shape[0] == 54
             assert vol_data["y_sim"].shape[0] == 54
             assert len(vol_data["sources"]) == 54
+            assert "tg_pct" in BREAD_PROCESS_FEATURES
         finally:
             session.close()
 

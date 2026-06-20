@@ -52,8 +52,10 @@ Coverage by process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `generic_gluten_free_bread` | 2 |
-| `hydrocolloid_bread` | 29 |
+| `enzyme_bread` | 1 |
+| `enzyme_hydrocolloid_bread` | 12 |
+| `generic_gluten_free_bread` | 1 |
+| `hydrocolloid_bread` | 17 |
 | `millet_cultivar_bread` | 9 |
 | `protein_enriched_bread` | 16 |
 
@@ -72,8 +74,10 @@ By process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `generic_gluten_free_bread` | 2 |
-| `hydrocolloid_bread` | 29 |
+| `enzyme_bread` | 1 |
+| `enzyme_hydrocolloid_bread` | 12 |
+| `generic_gluten_free_bread` | 1 |
+| `hydrocolloid_bread` | 17 |
 | `millet_cultivar_bread` | 9 |
 | `protein_enriched_bread` | 16 |
 
@@ -140,27 +144,27 @@ By source:
 | `bianchi_2026_s7` | 2.14 | 2.3401 | 3.35 | 11.1315 | None | None | `hydrocolloid_bread` |
 | `bianchi_2026_s8` | 1.97 | 2.274 | 5.67 | 14.6163 | None | None | `protein_enriched_bread` |
 | `bianchi_2026_s9` | 2.14 | 2.2753 | 1.83 | 12.9995 | None | None | `protein_enriched_bread` |
-| `ghodosipoor_2025_r01` | 2.03 | 2.7212 | 68.063 | 9.1286 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r02` | 2.026 | 2.7212 | 66.5903 | 9.1286 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r03` | 1.89 | 2.7212 | 66.0929 | 9.1286 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r04` | 2.205 | 2.7212 | 69.0395 | 9.1286 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r05` | 2.087 | 2.7212 | 71.007 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r01` | 2.03 | 2.7212 | 68.063 | 9.1286 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r02` | 2.026 | 2.7212 | 66.5903 | 9.1286 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r03` | 1.89 | 2.7212 | 66.0929 | 9.1286 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r04` | 2.205 | 2.7212 | 69.0395 | 9.1286 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r05` | 2.087 | 2.7212 | 71.007 | 9.1286 | None | None | `enzyme_hydrocolloid_bread` |
 | `ghodosipoor_2025_r06` | 2.5977 | 2.7212 | 53.6437 | 9.1286 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r07` | 1.8473 | 2.6876 | 131.9171 | 9.7223 | None | None | `generic_gluten_free_bread` |
-| `ghodosipoor_2025_r08` | 1.7463 | 2.6975 | 108.2154 | 9.5469 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r09` | 2.2836 | 2.7444 | 47.976 | 8.7173 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r10` | 2.1045 | 2.7212 | 56.3108 | 9.1286 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r11` | 1.9444 | 2.6975 | 87.3368 | 9.5469 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r12` | 2.3163 | 2.7444 | 40.9026 | 8.7173 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_r13` | 2.466 | 2.7539 | 34.0761 | 8.5489 | None | None | `hydrocolloid_bread` |
-| `ghodosipoor_2025_f1_opt` | 2.34 | 2.7305 | 53.565 | 8.9631 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r07` | 1.8473 | 2.6876 | 131.9171 | 9.7223 | None | None | `enzyme_bread` |
+| `ghodosipoor_2025_r08` | 1.7463 | 2.6975 | 108.2154 | 9.5469 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r09` | 2.2836 | 2.7444 | 47.976 | 8.7173 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r10` | 2.1045 | 2.7212 | 56.3108 | 9.1286 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r11` | 1.9444 | 2.6975 | 87.3368 | 9.5469 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r12` | 2.3163 | 2.7444 | 40.9026 | 8.7173 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_r13` | 2.466 | 2.7539 | 34.0761 | 8.5489 | None | None | `enzyme_hydrocolloid_bread` |
+| `ghodosipoor_2025_f1_opt` | 2.34 | 2.7305 | 53.565 | 8.9631 | None | None | `enzyme_hydrocolloid_bread` |
 | `ghodosipoor_2025_f2_control` | 1.78 | 2.6876 | None | None | None | None | `generic_gluten_free_bread` |
 
 <!-- generated-end: bread-calibration-summary -->
 
 ## Interpretation
 
-The bread model is now connected to 60 measured bread outcomes from 9 peer-reviewed sources covering 5 process families. Key observations:
+The bread model is now connected to 60 measured bread outcomes from 9 peer-reviewed sources covering 7 process families. Key observations:
 
 **Specific volume** (54 records): MAE is 0.4862. Ghodosipoor 2025 adds quinoa/HPMC/TG records and shifts the main visible error toward overprediction for quinoa breads (simulated around 2.69-2.75 cm3/g vs measured 1.75-2.60 cm3/g). The Kahraman 2022 chickpea-enriched records remain underpredicted, and the Belorio 2020 rice/HPMC and Wojcik 2021 pea-protein gaps remain useful diagnostics.
 
@@ -168,7 +172,7 @@ The bread model is now connected to 60 measured bread outcomes from 9 peer-revie
 
 **Porosity** (11 records): MAE remains 7.53 with bias +0.82 because Ghodosipoor 2025 does not report porosity in mapped records. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This bidirectional error suggests the porosity heuristic needs separate terms for hydrocolloid and protein contributions.
 
-The model captures approximate volume scale across several families, but the Ghodosipoor tranche makes clear that enzyme-treated quinoa/HPMC breads are outside the current hardness mechanism. The weakest points remain ingredient-level detail and process mechanism detail: TG enzyme effects are not represented, commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and protein ingredient processing state is not represented.
+The model captures approximate volume scale across several families, but the Ghodosipoor tranche makes clear that enzyme-treated quinoa/HPMC breads are outside the current hardness mechanism. The weakest points remain ingredient-level detail and process mechanism detail: TG enzyme dose is now tracked but not modeled, commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and protein ingredient processing state is not represented.
 
 ## Post-Expansion Systematic Bias Review
 
@@ -207,7 +211,7 @@ Porosity bias for protein-enriched breads improved dramatically from strongly po
 
 The `model_confidence` coverage module correctly flags:
 - **Covered ingredients**: All 19 mapped ingredients appear in at least one bread record
-- **Process families**: 4 of 4 bread families have records; no active Pane recipe lacks a family match
+- **Process families**: 7 bread families have records after separating TG enzyme-treated breads; no active Pane recipe lacks a family match
 - **Risk flags**: Candidate recipes using maize starch, tapioca, or unlisted protein powders would be flagged as outside ingredient coverage
 
 The coverage limitations in `coverage.py` remain directionally accurate: strongest for specific volume, limited for porosity, and hardness now broader but strongly biased for quinoa/HPMC/TG records. Parsamajd 2025 still lacks table-backed specific volume, while Ghodosipoor 2025 adds HPMC/TG response data without giving the simulator an enzyme mechanism.
@@ -237,4 +241,4 @@ The coverage limitations in `coverage.py` remain directionally accurate: stronge
 - Hardness predictions are no longer directionally reliable for all families; Ghodosipoor 2025 shows severe underprediction for quinoa/HPMC/TG breads.
 - Porosity bias improved (+5.74 to +0.82) but MAE increased (5.74 to 7.53) as the model now both over- and under-predicts across different protein systems.
 - Some records use approximate ingredient mapping due to incomplete published formula disclosure.
-- The current model does not represent TG enzyme effects, protein processing state, cultivar-specific functionality, or full starch/hydrocolloid source-specific functionality.
+- The current model tracks but does not mechanistically model TG enzyme effects, protein processing state, cultivar-specific functionality, or full starch/hydrocolloid source-specific functionality.

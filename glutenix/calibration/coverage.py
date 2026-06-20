@@ -110,8 +110,9 @@ def build_domain_coverage(db: Session, domain: str) -> LiteratureCoverageSummary
         application = "Pane"
         family_fn = _bread_process_family
         limitations = [
-            "Bread coverage is strongest for specific volume and limited for porosity and crumb hardness.",
-            "Hydrocolloid-combination coverage currently has porosity but not table-backed specific volume.",
+            "Bread coverage is strongest for specific volume and limited for porosity.",
+            "Crumb hardness coverage is broader but unreliable for enzyme-treated quinoa/HPMC systems.",
+            "Microbial transglutaminase is tracked as a mechanism-OOD process field but is not modeled yet.",
         ]
     else:
         raise ValueError(f"Unknown literature coverage domain: {domain}")
@@ -203,6 +204,10 @@ def assess_literature_coverage(
         basis=basis,
         risk_flags=risk_flags,
     )
+
+    if summary.domain == "bread_baking" and float(process_values.get("tg_pct", 0.0)) > 0:
+        basis.append("Microbial transglutaminase appears in bread literature coverage, but enzyme effects are not modeled yet.")
+        risk_flags.append("tg_pct uses an unmodeled enzyme mechanism; treat bread quality predictions as mechanism-OOD.")
 
     score = round(0.35 * ingredient_score + 0.35 * blend_score + 0.30 * process_score, 4)
     if score >= 0.75 and not risk_flags:
