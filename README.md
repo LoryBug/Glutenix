@@ -152,6 +152,15 @@ uv run glutenix rank-pane --preset sorghum-baseline --blend-samples 100 --proces
 
 Available presets include `sorghum-baseline`, `bobs-inspired`, `schaer-inspired`, `freee-inspired`, and `quinoa-hpmc`. Add `--csv results.csv` or `--json results.json` for machine-readable output.
 
+To preserve a scientific history of runs and candidate decisions in the database:
+
+```bash
+uv run glutenix rank-pane --preset bobs-inspired --blend-samples 300 --process-samples 40 --top 10 --seed 42 --save-run --notes "commercial-inspired baseline"
+uv run glutenix runs list
+uv run glutenix runs show 1
+uv run glutenix candidates mark 1 --status test_next --notes "best protein/viscosity balance"
+```
+
 ### Bayesian Optimization And GPR
 
 The project includes Gaussian Process Regression and Bayesian Optimization components so that real experimental results can eventually guide future suggestions.

@@ -4,7 +4,9 @@ from glutenix.db.models import (
     BlendIngredient,
     ExperimentResult,
     Ingredient,
+    SimulationCandidate,
     SimulationResult,
+    SimulationRun,
 )
 from glutenix.schemas.models import (
     ApplicationCreate,
@@ -102,6 +104,44 @@ class TestSimulationResult:
 
         data = json.loads(sr.results)
         assert data["volume"] == 4.5
+
+
+class TestSimulationRun:
+    def test_create_simulation_run_with_candidates(self, db_session):
+        app = Application(name="Pane")
+        db_session.add(app)
+        db_session.commit()
+
+        run = SimulationRun(
+            application_id=app.id,
+            application_name="Pane",
+            source="cli.rank-pane",
+            preset="bobs-inspired",
+            seed=42,
+            blend_samples=10,
+            process_samples=5,
+            top_n=2,
+        )
+        db_session.add(run)
+        db_session.commit()
+
+        candidate = SimulationCandidate(
+            run_id=run.id,
+            rank=1,
+            score=0.75,
+            proportions='{"Sorghum flour": 0.35}',
+            process='{"baking_temp_c": 210}',
+            properties='{"protein_pct": 8.0}',
+            metrics='{"specific_volume_cm3_g": 2.4}',
+            confidence='{"level": "medium", "risk_flags": []}',
+            risk_flags="[]",
+        )
+        db_session.add(candidate)
+        db_session.commit()
+
+        assert run.id is not None
+        assert candidate.id is not None
+        assert run.candidates[0].rank == 1
 
 
 class TestExperimentResult:
