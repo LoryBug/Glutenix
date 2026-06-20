@@ -27,6 +27,12 @@ This report compares the early `BreadQualitySimulator` against structured gluten
 - Kahraman G, Harsa S, Casiraghi MC, Lucisano M, Cappa C. `Impact of Raw, Roasted and Dehulled Chickpea Flours on Technological and Nutritional Characteristics of Gluten-Free Bread`. Foods, 2022, 11(2):199.
   - DOI: `10.3390/foods11020199`
   - PMCID: `PMC8774402`
+- Bianchi F, et al. `Gluten-Free Bread with Tapioca Starch and Red Lentil Flour: A Mixture Design Approach`. Foods, 2026, 15(7):1230.
+  - DOI: `10.3390/foods15071230`
+  - PMCID: `PMC13072981`
+- Ghodosipoor Z, Zahed O, Fallahzadeh H, Mollakhalili-Meybodi N, Nematollahi A. `Optimization of Quinoa-Based Gluten-Free Bread Production Using Microbial Transglutaminase Enzyme and Hydroxypropyl Methyl Cellulose (HPMC) by Response Surface Methodology`. Food Science & Nutrition, 2025.
+  - DOI: `10.1002/fsn3.70891`
+  - PMCID: `PMC12400160`
 
 <!-- generated-start: bread-calibration-summary -->
 ## Dataset

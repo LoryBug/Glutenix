@@ -7,10 +7,18 @@ from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
 from glutenix.api.server import app
+from glutenix.calibration.literature import DEFAULT_BREAD_DATASET, load_literature_records
 from glutenix.db.base import Base
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 
 client = TestClient(app)
+
+
+def _source_count(records):
+    return len({
+        record.source.get("doi") or record.source.get("pmcid") or record.source.get("url")
+        for record in records
+    })
 
 
 @pytest.fixture(autouse=True)
@@ -238,11 +246,12 @@ class TestARD:
 
 class TestCalibration:
     def test_pasta_cooking_calibration(self):
+        records = load_literature_records()
         resp = client.get("/calibration/pasta-cooking")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["n_records"] == 40
-        assert data["source_count"] == 3
+        assert data["n_records"] == len(records)
+        assert data["source_count"] == _source_count(records)
         assert data["metric"] == "cooking_loss_pct"
         assert "before" in data
         assert "after" in data
@@ -252,14 +261,19 @@ class TestCalibration:
         assert "process_family" in data["grouped_errors"]
         assert data["record_groups"]["process_family"]["fresh_calcium_gel"] == 30
         assert data["record_groups"]["process_family"]["dried_extruded"] == 10
-        assert len(data["rows"]) == 40
+        assert len(data["rows"]) == len(records)
 
     def test_bread_baking_calibration(self):
+        records = load_literature_records(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=(),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
         resp = client.get("/calibration/bread-baking")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["n_records"] == 60
-        assert data["source_count"] == 9
+        assert data["n_records"] == len(records)
+        assert data["source_count"] == _source_count(records)
         assert data["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in data["metric_summaries"]
         assert "porosity_pct" in data["metric_summaries"]
@@ -267,15 +281,21 @@ class TestCalibration:
         assert data["record_groups"]["process_family"]["hydrocolloid_bread"] == 17
         assert data["record_groups"]["process_family"]["enzyme_hydrocolloid_bread"] == 12
         assert data["record_groups"]["process_family"]["protein_enriched_bread"] == 16
-        assert len(data["rows"]) == 60
+        assert len(data["rows"]) == len(records)
 
     def test_literature_coverage(self):
+        pasta_records = load_literature_records()
+        bread_records = load_literature_records(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=(),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
         resp = client.get("/calibration/coverage")
         assert resp.status_code == 200
         data = resp.json()
         assert set(data["domains"]) == {"pasta_cooking", "bread_baking"}
-        assert data["domains"]["pasta_cooking"]["record_count"] == 40
-        assert data["domains"]["bread_baking"]["record_count"] == 60
+        assert data["domains"]["pasta_cooking"]["record_count"] == len(pasta_records)
+        assert data["domains"]["bread_baking"]["record_count"] == len(bread_records)
         assert "hydration_pct" in data["domains"]["bread_baking"]["process_ranges"]
         assert "water_to_flour_ratio" in data["domains"]["pasta_cooking"]["process_ranges"]
 

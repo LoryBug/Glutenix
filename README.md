@@ -188,6 +188,7 @@ Current bread sources include:
 - Belorio and Gomez 2020: hydration effects in rice/maize HPMC/psyllium/xanthan breads.
 - Wojcik et al. 2021: pea-protein-enriched buckwheat/flaxseed gluten-free bread.
 - Kahraman et al. 2022: raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
+- Bianchi et al. 2026: tapioca starch/red lentil mixture-design gluten-free breads.
 - Ghodosipoor et al. 2025: quinoa flour + HPMC + microbial transglutaminase CCD gluten-free bread optimization.
 
 Important limitation: the linear correction in calibration reports is diagnostic only. It is not treated as production calibration.
@@ -338,11 +339,7 @@ The project currently has automated tests for:
 - Bayesian optimization and GPR behavior.
 - Application-level optimization.
 
-Recent full validation:
-
-```text
-117 passed
-```
+Recent full validation should be checked with `uv run pytest -q`; avoid relying on stale hardcoded pass counts in docs.
 
 ## Development Workflow
 
