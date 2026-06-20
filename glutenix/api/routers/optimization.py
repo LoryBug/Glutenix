@@ -2,7 +2,7 @@ import random
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db, get_gpr
@@ -68,16 +68,22 @@ class SuggestIngredient(BaseModel):
     min_proportion: float = Field(ge=0, le=1, default=0)
     max_proportion: float = Field(ge=0, le=1, default=1)
 
+    @model_validator(mode="after")
+    def min_not_greater_than_max(self):
+        if self.min_proportion > self.max_proportion:
+            raise ValueError("min_proportion must be <= max_proportion")
+        return self
+
 
 class SuggestRequest(BaseModel):
     ingredients: list[SuggestIngredient] = Field(min_length=2)
     target: str = "volume"
     n_candidates: int = Field(default=5, ge=1, le=20)
     n_samples: int = Field(default=1000, ge=100, le=5000)
-    fermentation_temp_c: float = 30.0
-    fermentation_duration_min: float = 120.0
-    baking_temp_c: float = 200.0
-    baking_duration_min: float = 25.0
+    fermentation_temp_c: float = Field(default=30.0, gt=0, le=60)
+    fermentation_duration_min: float = Field(default=120.0, gt=0, le=1440)
+    baking_temp_c: float = Field(default=200.0, gt=0, le=350)
+    baking_duration_min: float = Field(default=25.0, gt=0, le=240)
 
 
 class SuggestCandidate(BaseModel):
@@ -108,12 +114,11 @@ def suggest(body: SuggestRequest, db: Session = Depends(get_db)):
     baker = BakingSimulator(BakingParams(oven_temp_c=body.baking_temp_c, baking_time_min=body.baking_duration_min))
 
     candidates = []
+    rng = random.Random()
     for _ in range(body.n_samples):
-        raw = [random.uniform(lo, hi) for _, lo, hi in items]
-        total = sum(raw)
-        if total == 0:
-            continue
-        props = [r / total for r in raw]
+        props = _sample_bounded_proportions(items, rng, max_attempts=20)
+        if props is None:
+            break
 
         data = [(ing, p) for (ing, _, _), p in zip(items, props)]
         blend_props = calc.calculate(data)
@@ -138,8 +143,14 @@ def suggest(body: SuggestRequest, db: Session = Depends(get_db)):
 
 
 class ProcessRange(BaseModel):
-    min: float
-    max: float
+    min: float = Field(gt=0)
+    max: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def min_not_greater_than_max(self):
+        if self.min > self.max:
+            raise ValueError("min must be <= max")
+        return self
 
 
 class ApplicationSuggestRequest(BaseModel):

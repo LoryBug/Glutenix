@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
+import json
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
-from glutenix.db.models import ExperimentResult
+from glutenix.db.models import Blend, ExperimentResult
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 
@@ -14,6 +16,12 @@ class ExperimentCreate(BaseModel):
     blend_id: int = Field(gt=0)
     conditions: str = Field(default="{}", description="JSON: temp, umidità, tempo lievitazione/cottura")
     metrics: str = Field(description="JSON: volume, core_temp, crust_temp, texture_score, ecc.")
+
+    @field_validator("conditions", "metrics")
+    @classmethod
+    def valid_json(cls, value: str) -> str:
+        json.loads(value)
+        return value
 
 
 class ExperimentResponse(BaseModel):
@@ -57,13 +65,21 @@ def get_experiment(experiment_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=ExperimentResponse, status_code=201)
 def create_experiment(body: ExperimentCreate, db: Session = Depends(get_db)):
+    blend = db.query(Blend).filter(Blend.id == body.blend_id).first()
+    if blend is None:
+        raise HTTPException(404, detail="Blend not found")
+
     r = ExperimentResult(
         blend_id=body.blend_id,
         conditions=body.conditions,
         metrics=body.metrics,
     )
     db.add(r)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, detail="Experiment could not be created") from exc
     db.refresh(r)
     return ExperimentResponse(
         id=r.id,

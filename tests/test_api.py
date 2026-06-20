@@ -112,6 +112,37 @@ class TestBlends:
         assert resp.status_code == 200
         assert resp.json()["name"] == "Test blend"
 
+    def test_create_unknown_ingredient_returns_404(self):
+        resp = client.post("/blends", json={
+            "name": "Bad ingredient blend",
+            "ingredients": [
+                {"ingredient_id": 999, "proportion": 1.0},
+            ],
+        })
+        assert resp.status_code == 404
+
+    def test_create_unknown_application_returns_404(self):
+        resp = client.post("/blends", json={
+            "name": "Bad app blend",
+            "application_id": 999,
+            "ingredients": [
+                {"ingredient_id": 1, "proportion": 1.0},
+            ],
+        })
+        assert resp.status_code == 404
+
+    def test_duplicate_blend_name_returns_409(self):
+        payload = {
+            "name": "Duplicate blend",
+            "ingredients": [
+                {"ingredient_id": 1, "proportion": 1.0},
+            ],
+        }
+        first = client.post("/blends", json=payload)
+        assert first.status_code == 201
+        second = client.post("/blends", json=payload)
+        assert second.status_code == 409
+
 
 class TestSimulation:
     def test_simulate(self):
@@ -134,6 +165,13 @@ class TestSimulation:
     def test_simulate_not_found(self):
         resp = client.post("/simulate", json={"blend_id": 999})
         assert resp.status_code == 404
+
+    def test_simulate_rejects_negative_duration(self):
+        resp = client.post("/simulate", json={
+            "blend_id": 1,
+            "fermentation_duration_min": -1,
+        })
+        assert resp.status_code == 422
 
     def test_simulate_cooking(self):
         resp = client.post("/blends", json={
@@ -271,6 +309,23 @@ class TestOptimizeSuggest:
             assert "core_temp_c" in c
             assert len(c["proportions"]) == 2
 
+    def test_suggest_respects_bounds_after_normalization(self):
+        resp = client.post("/optimize/suggest", json={
+            "ingredients": [
+                {"ingredient_id": 1, "min_proportion": 0.7, "max_proportion": 0.8},
+                {"ingredient_id": 11, "min_proportion": 0.2, "max_proportion": 0.3},
+            ],
+            "n_candidates": 3,
+            "n_samples": 100,
+        })
+        assert resp.status_code == 200, resp.text
+        for candidate in resp.json()["candidates"]:
+            rice = candidate["proportions"]["White rice flour"]
+            starch = candidate["proportions"]["Potato starch"]
+            assert 0.7 <= rice <= 0.8
+            assert 0.2 <= starch <= 0.3
+            assert abs(sum(candidate["proportions"].values()) - 1.0) <= 0.001
+
     def test_application_suggest(self):
         resp = client.post("/optimize/application-suggest", json={
             "application_id": 1,
@@ -395,3 +450,19 @@ class TestExperiments:
 
         resp = client.get(f"/experiments/{exp_id}")
         assert resp.status_code == 404
+
+    def test_create_unknown_blend_returns_404(self):
+        resp = client.post("/experiments", json={
+            "blend_id": 999,
+            "conditions": "{}",
+            "metrics": "{}",
+        })
+        assert resp.status_code == 404
+
+    def test_create_rejects_invalid_json(self):
+        resp = client.post("/experiments", json={
+            "blend_id": 1,
+            "conditions": "not-json",
+            "metrics": "{}",
+        })
+        assert resp.status_code == 422
