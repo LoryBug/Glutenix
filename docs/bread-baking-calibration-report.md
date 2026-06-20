@@ -62,12 +62,12 @@ Coverage:
 | Metric | Records | MAE | RMSE | Bias |
 |---|---:|---:|---:|---:|
 | `specific_volume_cm3_g` | 30 | 0.5054 | 1.0795 | -0.2885 |
-| `crumb_hardness_n` | 23 | 5.8512 | 8.7912 | -0.2465 |
+| `crumb_hardness_n` | 23 | 5.7347 | 8.6809 | 0.6221 |
 | `porosity_pct` | 11 | 7.5321 | 10.8127 | 0.8222 |
 
 The specific-volume MAE increased slightly from 0.4446 to 0.5054 after adding the Kahraman 2022 chickpea-enriched records. The model severely underpredicts these new records (2.51-2.89 cm3/g simulated as 1.66), because chickpea protein enhances gas retention and crumb expansion in ways the current heuristic does not capture. The rice starch-type modifier (issue #7) only applies to single-flour systems and does not benefit rice+chickpea blends.
 
-Crumb hardness MAE remained stable at 5.85 N. The Kahraman roasted chickpea record (RCF, 5.49 N measured vs 16.96 simulated) is heavily overpredicted, while the raw and dehulled chickpea records are closer (13.37 and 14.05 measured vs 16.96 simulated). The broader lesson is that protein source and processing state can materially affect texture even when mapped formula ratios are identical.
+Crumb hardness MAE remained stable at 5.73 N after the hydrocolloid-specific hardness modifiers from issue #8 and the Kahraman 2022 additions from issue #9. The Kahraman roasted chickpea record (RCF, 5.49 N measured vs 16.96 simulated) is heavily overpredicted, while the raw and dehulled chickpea records are closer (13.37 and 14.05 measured vs 16.96 simulated). The broader lesson is that protein source and processing state can materially affect texture even when mapped formula ratios are identical.
 
 Porosity coverage expanded from 8 to 11 records. MAE increased from 5.74 to 7.53, but bias improved significantly from +5.74 (systematic overprediction) to +0.82 (nearly centered). The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This indicates the porosity heuristic (driven by hydrocolloid fraction) fails for both protein-rich and hydrocolloid-lean formulations in opposite directions.
 
@@ -112,26 +112,26 @@ By source:
 | `torres_2026_fa` | 2.9 | 2.7494 | None | None | None | None | `commercial_mix_bread` |
 | `torres_2026_fb` | 2.8 | 2.5801 | None | None | None | None | `commercial_mix_bread` |
 | `torres_2026_fc` | 3.3 | 2.702 | None | None | None | None | `commercial_mix_bread` |
-| `loncaric_2026_rfb` | 1.93 | 2.2925 | 6.15 | 8.1604 | 21.01 | 39.8795 | `protein_enriched_bread` |
-| `loncaric_2026_cfb` | 1.65 | 2.1786 | 15.92 | 14.1252 | 17.17 | 38.6616 | `protein_enriched_bread` |
+| `loncaric_2026_rfb` | 1.93 | 2.2925 | 6.15 | 8.975 | 21.01 | 39.8795 | `protein_enriched_bread` |
+| `loncaric_2026_cfb` | 1.65 | 2.1786 | 15.92 | 14.6111 | 17.17 | 38.6616 | `protein_enriched_bread` |
 | `parsamajd_2025_guar` | None | None | None | None | 33.84 | 35.8445 | `hydrocolloid_bread` |
 | `parsamajd_2025_hpmc` | None | None | None | None | 35.31 | 35.8103 | `hydrocolloid_bread` |
 | `parsamajd_2025_xanthan` | None | None | None | None | 34.46 | 35.9032 | `hydrocolloid_bread` |
 | `parsamajd_2025_xanthan_guar` | None | None | None | None | 35.45 | 35.8739 | `hydrocolloid_bread` |
 | `parsamajd_2025_hpmc_guar` | None | None | None | None | 35.19 | 35.8274 | `hydrocolloid_bread` |
 | `parsamajd_2025_hpmc_xanthan` | None | None | None | None | 36.04 | 35.8568 | `hydrocolloid_bread` |
-| `belorio_2020_rf_hpmc` | 1.33 | 1.997 | 42.44 | 11.996 | None | None | `hydrocolloid_bread` |
-| `belorio_2020_rf_psyllium` | 1.44 | 2.1447 | 14.98 | 11.3464 | None | None | `hydrocolloid_bread` |
-| `belorio_2020_rf_xanthan` | 1.48 | 2.1488 | 9.04 | 11.3298 | None | None | `hydrocolloid_bread` |
-| `belorio_2020_ms_hpmc` | 7.58 | 2.1064 | 1.44 | 11.6942 | None | None | `hydrocolloid_bread` |
-| `belorio_2020_ms_psyllium` | 2.37 | 2.1107 | 19.51 | 11.6759 | None | None | `hydrocolloid_bread` |
-| `belorio_2020_ms_xanthan` | 2.25 | 2.1145 | 19.58 | 11.66 | None | None | `hydrocolloid_bread` |
-| `wojcik_2021_ppp0` | 2.962 | 2.1798 | 4.5 | 8.2334 | None | None | `hydrocolloid_bread` |
-| `wojcik_2021_ppp5` | 2.533 | 2.2006 | 4.0 | 8.1167 | None | None | `protein_enriched_bread` |
-| `wojcik_2021_ppp10` | 2.253 | 2.2213 | 4.5 | 8.0022 | None | None | `protein_enriched_bread` |
-| `wojcik_2021_ppp15` | 1.986 | 2.2418 | 6.0 | 7.8897 | None | None | `protein_enriched_bread` |
-| `wojcik_2021_ppp20` | 1.823 | 2.2623 | 8.0 | 7.7793 | None | None | `protein_enriched_bread` |
-| `wojcik_2021_ppp25` | 1.805 | 2.2826 | 10.0 | 7.6709 | None | None | `protein_enriched_bread` |
+| `belorio_2020_rf_hpmc` | 1.33 | 1.997 | 42.44 | 13.364 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_rf_psyllium` | 1.44 | 2.1447 | 14.98 | 16.4119 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_rf_xanthan` | 1.48 | 2.1488 | 9.04 | 14.429 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_ms_hpmc` | 7.58 | 2.1064 | 1.44 | 11.302 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_ms_psyllium` | 2.37 | 2.1107 | 19.51 | 15.2071 | None | None | `hydrocolloid_bread` |
+| `belorio_2020_ms_xanthan` | 2.25 | 2.1145 | 19.58 | 13.2321 | None | None | `hydrocolloid_bread` |
+| `wojcik_2021_ppp0` | 2.962 | 2.1798 | 4.5 | 11.3247 | None | None | `hydrocolloid_bread` |
+| `wojcik_2021_ppp5` | 2.533 | 2.2006 | 4.0 | 8.2015 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp10` | 2.253 | 2.2213 | 4.5 | 8.0806 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp15` | 1.986 | 2.2418 | 6.0 | 7.9622 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp20` | 1.823 | 2.2623 | 8.0 | 7.846 | None | None | `protein_enriched_bread` |
+| `wojcik_2021_ppp25` | 1.805 | 2.2826 | 10.0 | 7.7321 | None | None | `protein_enriched_bread` |
 | `kahraman_2022_cf` | 2.51 | 1.6641 | 13.37 | 16.9552 | 41.49 | 32.6118 | `protein_enriched_bread` |
 | `kahraman_2022_rcf` | 2.89 | 1.6641 | 5.49 | 16.9552 | 51.41 | 32.6118 | `protein_enriched_bread` |
 | `kahraman_2022_dcf` | 2.75 | 1.6641 | 14.05 | 16.9552 | 41.84 | 32.6118 | `protein_enriched_bread` |
@@ -142,7 +142,7 @@ The bread model is now connected to 36 measured bread outcomes from 7 peer-revie
 
 **Specific volume** (30 records): MAE is 0.5054. The Kahraman 2022 chickpea-enriched records (2.51-2.89 cm3/g) are severely underpredicted (simulated as 1.66), revealing that chickpea protein gas-retention enhancement is not captured by the current model. The Wojcik 2021 pea-protein dose-response and the Belorio 2020 rice/HPMC underprediction remain as previously identified gaps.
 
-**Crumb hardness** (23 records): MAE is 5.85 N. The Kahraman roasted chickpea record (5.49 N) is heavily overpredicted (simulated as 16.96 N), while the raw and dehulled chickpea records are closer. All three share the same simulation because chickpea processing type is not differentiated in the current ingredient model.
+**Crumb hardness** (23 records): MAE is 5.73 N after the issue #8 hydrocolloid-specific modifiers and issue #9 record additions. The Kahraman roasted chickpea record (5.49 N) is heavily overpredicted (simulated as 16.96 N), while the raw and dehulled chickpea records are closer. All three share the same simulation because processing state is not differentiated in the current ingredient model.
 
 **Porosity** (11 records): MAE increased from 5.74 to 7.53, but bias improved from +5.74 to +0.82. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This bidirectional error suggests the porosity heuristic needs separate terms for hydrocolloid and protein contributions.
 
@@ -154,32 +154,32 @@ This section documents the structured review performed after adding 12 new recor
 
 ### Volume bias by process family
 
-| Family | n | Mean bias (meas - sim) | Direction |
+| Family | n | Mean bias (sim - meas) | Direction |
 |---|---|---|---:|
-| `commercial_mix_bread` | 4 | +0.28 | Model slightly underpredicts |
-| `hydrocolloid_bread` | 7 | +0.66 | Model notably underpredicts |
-| `millet_cultivar_bread` | 9 | +0.04 | Excellent agreement |
-| `protein_enriched_bread` | 10 | -0.43 | Model overpredicts (Kahraman severely underpredicts, Loncaric and Wojcik overpredict) |
+| `commercial_mix_bread` | 4 | -0.28 | Model slightly underpredicts |
+| `hydrocolloid_bread` | 7 | -0.72 | Model notably underpredicts |
+| `millet_cultivar_bread` | 9 | -0.06 | Excellent agreement |
+| `protein_enriched_bread` | 10 | -0.19 | Mixed, near-centered |
 
-The millet cultivar breads still show the best volume agreement. Protein-enriched bread bias widened from -0.24 to -0.43 because the Kahraman records (measured 2.51-2.89, simulated 1.66) are severely underpredicted, while Wojcik and Loncaric records remain overpredicted. This bidirectional error indicates the model lacks a protein-type-specific gas retention factor.
+The millet cultivar breads still show the best volume agreement. Protein-enriched bread average bias is near-centered because the Kahraman records (measured 2.51-2.89, simulated 1.66) are severely underpredicted, while Wojcik and Loncaric records remain partly overpredicted. This bidirectional error indicates the model lacks a general protein-source gas-retention factor.
 
 ### Hardness bias by process family
 
-| Family | n | Mean bias (meas - sim) | Direction |
+| Family | n | Mean bias (sim - meas) | Direction |
 |---|---|---|---:|
-| `hydrocolloid_bread` | 7 | +4.79 | Model severely underpredicts |
-| `protein_enriched_bread` | 10 | +1.34 | Model slightly underpredicts (mixed) |
+| `hydrocolloid_bread` | 7 | -2.32 | Model underpredicts |
+| `protein_enriched_bread` | 10 | +2.68 | Model overpredicts (mixed) |
 
-Hardness coverage grew from 2 to 23 records. Protein-enriched bias shifted from -1.02 to +1.34 because the Kahraman records show mixed behavior: CF (13.37 vs 16.96, -3.59 overpredicted) and DCF (14.05 vs 16.96, -2.91 overpredicted) are moderately overpredicted, while RCF (5.49 vs 16.96, -11.47) is severely overpredicted. This should be treated as evidence that processing state can matter, not as a reason to overfit the model to one ingredient family.
+Hardness coverage grew from 2 to 23 records. Protein-enriched bias shifted positive because the Kahraman records show mixed behavior: CF (13.37 vs 16.96) and DCF (14.05 vs 16.96) are moderately overpredicted, while RCF (5.49 vs 16.96) is severely overpredicted. This should be treated as evidence that processing state can matter, not as a reason to overfit the model to one ingredient family.
 
 ### Porosity bias by process family
 
-| Family | n | Mean bias (meas - sim) | Direction |
+| Family | n | Mean bias (sim - meas) | Direction |
 |---|---|---|---:|
-| `hydrocolloid_bread` | 6 | -0.80 | Close agreement |
-| `protein_enriched_bread` | 5 | -2.86 | Mixed (Loncaric overpredicted, Kahraman underpredicted) |
+| `hydrocolloid_bread` | 6 | +1.19 | Close agreement |
+| `protein_enriched_bread` | 5 | +0.38 | Mixed, near-centered |
 
-Porosity bias for protein-enriched breads improved dramatically from -20.18 to -2.86. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted by 8-19 points, partially offsetting the Loncaric overprediction (~20 points). This bidirectional error suggests that protein type and processing history (roasting, dehulling) substantially affect crumb porosity in ways the current hydrocolloid-driven heuristic cannot capture.
+Porosity bias for protein-enriched breads improved dramatically from strongly positive to near-centered. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted by 8-19 points, partially offsetting the Loncaric overprediction (~20 points). This bidirectional error suggests that protein type and processing history substantially affect crumb porosity in ways the current hydrocolloid-driven heuristic cannot capture.
 
 ### Coverage alignment
 

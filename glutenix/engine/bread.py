@@ -149,12 +149,32 @@ class BreadQualitySimulator:
             0.05,
             1.2,
         ))
+
+        hpmc_frac = self._ingredient_fraction(blend_props, "hpmc")
+        psyllium_frac = self._ingredient_fraction(blend_props, "psyllium")
+        xanthan_frac = self._ingredient_fraction(blend_props, "xanthan")
+
+        is_hc_controlled_hardness = (
+            blend_props.hydrocolloid_pct > 0.001
+            and chickpea <= 0.25
+            and whey <= 0.05
+            and self._ingredient_fraction(blend_props, "pea protein") <= 0.01
+        )
+        if is_hc_controlled_hardness:
+            hc_hardness_mod = (
+                6.0 * (psyllium_frac / blend_props.hydrocolloid_pct)
+                + 3.0 * (xanthan_frac / blend_props.hydrocolloid_pct)
+            ) * min(blend_props.hydrocolloid_pct / 0.03, 1.0)
+        else:
+            hc_hardness_mod = 0.0
+
         hardness = (
             18.0 / max(specific_volume, 0.8) ** 1.35
             + 14.0 * staling_drive * storage_factor
             + 8.0 * chickpea
             + 2.0 * millet
             - 2.0 * whey
+            + hc_hardness_mod
         )
         hardness = float(np.clip(hardness, 1.0, 80.0))
         porosity = float(np.clip(
