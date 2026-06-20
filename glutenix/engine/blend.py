@@ -28,6 +28,9 @@ class BlendProperties:
 
     hydrocolloid_pct: float = 0.0
 
+    dominant_starch_type: str | None = None
+    starch_fraction: float = 0.0
+
     ingredients_detail: list[dict] = field(default_factory=list)
 
 
@@ -63,6 +66,7 @@ class BlendCalculator:
         self._compute_amylose(props, ingredient_data)
         self._compute_viscosity_index(props, ingredient_data)
         self._compute_hydrocolloid_pct(props, ingredient_data)
+        self._compute_starch_type(props, ingredient_data)
 
         props.ingredients_detail = [
             {"name": ing.name, "proportion": prop, "category": ing.category}
@@ -176,3 +180,17 @@ class BlendCalculator:
         props.hydrocolloid_pct = sum(
             pct for ing, pct in ingredient_data if ing.category == "hydrocolloid"
         )
+
+    def _compute_starch_type(
+        self,
+        props: BlendProperties,
+        ingredient_data: list[tuple[Ingredient, float]],
+    ) -> None:
+        weighted: dict[str, float] = {}
+        for ing, pct in ingredient_data:
+            st = ing.starch_type
+            if st:
+                weighted[st] = weighted.get(st, 0.0) + pct
+        if weighted:
+            props.dominant_starch_type = max(weighted, key=weighted.get)
+            props.starch_fraction = sum(weighted.values())

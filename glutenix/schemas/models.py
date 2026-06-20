@@ -29,6 +29,10 @@ class IngredientCreate(BaseModel):
     saturated_fat_pct: Optional[float] = Field(None, ge=0, le=100)
     sodium_mg_per_100g: Optional[float] = Field(None, ge=0)
 
+    starch_type: Optional[str] = Field(
+        None, max_length=20, pattern=r"^(rice|maize|tapioca|potato|millet|buckwheat)?$"
+    )
+
     extra_properties: Optional[str] = None
 
 

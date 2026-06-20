@@ -49,6 +49,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=68, gelatinization_temp_max=78,
             amylose_pct=19.0,
             kcal_per_100g=366.0, sugars_pct=0.1, saturated_fat_pct=0.4, sodium_mg_per_100g=0.0,
+            starch_type="rice",
         ),
         Ingredient(
             name="Brown rice flour",
@@ -61,6 +62,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=68, gelatinization_temp_max=78,
             amylose_pct=19.0,
             kcal_per_100g=363.0, sugars_pct=0.7, saturated_fat_pct=0.6, sodium_mg_per_100g=8.0,
+            starch_type="rice",
         ),
         Ingredient(
             name="Buckwheat flour",
@@ -73,6 +75,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=62, gelatinization_temp_max=72,
             amylose_pct=25.0,
             kcal_per_100g=335.0, sugars_pct=2.6, saturated_fat_pct=0.6, sodium_mg_per_100g=11.0,
+            starch_type="buckwheat",
         ),
         Ingredient(
             name="Sorghum flour",
@@ -119,6 +122,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=67, gelatinization_temp_max=78,
             amylose_pct=21.0,
             kcal_per_100g=365.0, sugars_pct=0.2, saturated_fat_pct=0.6, sodium_mg_per_100g=4.0,
+            starch_type="millet",
         ),
         Ingredient(
             name="Oat flour (GF)",
@@ -155,6 +159,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=58, gelatinization_temp_max=70,
             amylose_pct=17.0,
             kcal_per_100g=358.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=1.0,
+            starch_type="tapioca",
         ),
         Ingredient(
             name="Potato starch",
@@ -167,6 +172,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=56, gelatinization_temp_max=67,
             amylose_pct=21.0,
             kcal_per_100g=357.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=18.0,
+            starch_type="potato",
         ),
         Ingredient(
             name="Corn starch",
@@ -179,6 +185,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=62, gelatinization_temp_max=72,
             amylose_pct=27.0,
             kcal_per_100g=357.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=9.0,
+            starch_type="maize",
         ),
         Ingredient(
             name="Sweet rice flour (Mochiko)",
@@ -191,6 +198,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=63, gelatinization_temp_max=72,
             amylose_pct=1.0,
             kcal_per_100g=364.0, sugars_pct=0.1, saturated_fat_pct=0.4, sodium_mg_per_100g=0.0,
+            starch_type="rice",
         ),
         Ingredient(
             name="Xanthan gum",
@@ -264,6 +272,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=70.55, gelatinization_temp_max=79.12,
             amylose_pct=28.12,
             kcal_per_100g=365.0, sugars_pct=0.1, saturated_fat_pct=0.2, sodium_mg_per_100g=2.0,
+            starch_type="rice",
         ),
         Ingredient(
             name="Konjac glucomannan",
@@ -344,6 +353,7 @@ def _seed_ingredients(session):
             gelatinization_temp_min=62.0, gelatinization_temp_max=74.0,
             amylose_pct=25.0,
             kcal_per_100g=361.0, sugars_pct=0.6, saturated_fat_pct=0.5, sodium_mg_per_100g=5.0,
+            starch_type="maize",
         ),
         Ingredient(
             name="Modified starch (ADA)",

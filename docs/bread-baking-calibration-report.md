@@ -57,11 +57,11 @@ Coverage:
 
 | Metric | Records | MAE | RMSE | Bias |
 |---|---|---|---:|---:|---:|
-| `specific_volume_cm3_g` | 27 | 0.4922 | 1.117 | -0.1641 |
-| `crumb_hardness_n` | 20 | 5.8552 | 9.3884 | -1.8843 |
-| `porosity_pct` | 8 | 5.6942 | 10.1545 | 5.6484 |
+| `specific_volume_cm3_g` | 27 | 0.4446 | 1.0812 | -0.2036 |
+| `crumb_hardness_n` | 20 | 5.8224 | 9.107 | -1.5818 |
+| `porosity_pct` | 8 | 5.7435 | 9.8025 | 5.7435 |
 
-The specific-volume MAE has increased from 0.2042 to 0.4922 as new hydrocolloid and protein-enriched records widened the formulation space. The rice-flour-based Belorio records (1.33-1.48 cm3/g) and the very high maize-starch+HPMC record (7.58 cm3/g) challenge the model's uniform treatment of starch and flour bases.
+The specific-volume MAE decreased from 0.4922 to 0.4446 after implementing starch-type functional differentiation (issue #7). The rice-flour-based Belorio records (1.33-1.48 cm3/g) improved significantly (bias from ~-0.68 to ~-0.44) with a rice-specific modifier. The maize-starch+HPMC record (7.58 cm3/g) remains a strong outlier driven by a specific HPMC–maize interaction beyond the scope of the current modifier.
 
 Crumb hardness coverage has grown from 2 to 20 records, though MAE is 5.85 N. The model underestimates Belorio's high hardness values (e.g., 42.44 N simulated as 12.0 N) and overestimates Wojcik's softer protein-enriched breads.
 
