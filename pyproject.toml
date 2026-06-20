@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.0",
     "numpy>=2.0",
     "scipy>=1.15",
+    "scikit-learn>=1.5",
     "gpytorch>=1.13",
     "torch>=2.0",
     "botorch>=0.18.1",
