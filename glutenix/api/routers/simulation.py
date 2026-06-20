@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
@@ -76,11 +76,11 @@ def get_simulation(simulation_id: int, db: Session = Depends(get_db)):
 
 
 class SimulateRequest(BaseModel):
-    blend_id: int
-    fermentation_temp_c: float = 30.0
-    fermentation_duration_min: float = 120.0
-    baking_temp_c: float = 200.0
-    baking_duration_min: float = 25.0
+    blend_id: int = Field(gt=0)
+    fermentation_temp_c: float = Field(default=30.0, gt=0, le=60)
+    fermentation_duration_min: float = Field(default=120.0, gt=0, le=1440)
+    baking_temp_c: float = Field(default=200.0, gt=0, le=350)
+    baking_duration_min: float = Field(default=25.0, gt=0, le=240)
 
 
 class SimulateResponse(BaseModel):
@@ -250,10 +250,16 @@ def simulate(body: SimulateRequest, db: Session = Depends(get_db)):
 
 
 class SweepRangeSchema(BaseModel):
-    min: float
-    max: float
-    step: float | None = None
-    n: int | None = None
+    min: float = Field(gt=0)
+    max: float = Field(gt=0)
+    step: float | None = Field(default=None, gt=0)
+    n: int | None = Field(default=None, gt=0, le=10000)
+
+    @model_validator(mode="after")
+    def min_not_greater_than_max(self):
+        if self.min > self.max:
+            raise ValueError("min must be <= max")
+        return self
 
 
 class SweepRequest(BaseModel):

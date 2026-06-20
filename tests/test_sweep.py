@@ -250,6 +250,36 @@ class TestSweepAPI:
         })
         assert response.status_code == 422
 
+    def test_sweep_rejects_inverted_range(self):
+        resp = client.post("/blends", json={
+            "name": "Sweep inverted range",
+            "ingredients": [
+                {"ingredient_id": 1, "proportion": 1.0},
+            ],
+        })
+        blend_id = resp.json()["id"]
+
+        response = client.post("/simulate/sweep", json={
+            "blend_id": blend_id,
+            "fermentation_temp": {"min": 35, "max": 25, "step": 1},
+        })
+        assert response.status_code == 422
+
+    def test_sweep_rejects_non_positive_step(self):
+        resp = client.post("/blends", json={
+            "name": "Sweep bad step",
+            "ingredients": [
+                {"ingredient_id": 1, "proportion": 1.0},
+            ],
+        })
+        blend_id = resp.json()["id"]
+
+        response = client.post("/simulate/sweep", json={
+            "blend_id": blend_id,
+            "baking_duration": {"min": 20, "max": 30, "step": 0},
+        })
+        assert response.status_code == 422
+
     def test_sweep_uses_application_profile(self):
         resp = client.post("/blends", json={
             "name": "Sweep pizza profile",
