@@ -31,9 +31,9 @@ This report compares the early `BreadQualitySimulator` against structured gluten
 <!-- generated-start: bread-calibration-summary -->
 ## Dataset
 
-Records: 45
+Records: 60
 
-Sources: 8
+Sources: 9
 
 Main metric: `specific_volume_cm3_g`
 
@@ -52,7 +52,8 @@ Coverage by process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `hydrocolloid_bread` | 16 |
+| `generic_gluten_free_bread` | 2 |
+| `hydrocolloid_bread` | 29 |
 | `millet_cultivar_bread` | 9 |
 | `protein_enriched_bread` | 16 |
 
@@ -60,8 +61,8 @@ Coverage by process family:
 
 | Metric | Records | MAE | RMSE | Bias |
 |---|---:|---:|---:|---:|
-| `specific_volume_cm3_g` | 39 | 0.4391 | 0.9536 | -0.1716 |
-| `crumb_hardness_n` | 26 | 6.7698 | 8.7256 | 3.4269 |
+| `specific_volume_cm3_g` | 54 | 0.4862 | 0.88 | 0.0451 |
+| `crumb_hardness_n` | 40 | 25.0772 | 38.5882 | -18.4493 |
 | `porosity_pct` | 11 | 7.5321 | 10.8127 | 0.8222 |
 
 ## Record Groups
@@ -71,7 +72,8 @@ By process family:
 | Process family | Records |
 |---|---:|
 | `commercial_mix_bread` | 4 |
-| `hydrocolloid_bread` | 16 |
+| `generic_gluten_free_bread` | 2 |
+| `hydrocolloid_bread` | 29 |
 | `millet_cultivar_bread` | 9 |
 | `protein_enriched_bread` | 16 |
 
@@ -79,6 +81,7 @@ By source:
 
 | Source | Records |
 |---|---:|
+| `10.1002/fsn3.70891` | 15 |
 | `10.1002/fsn3.71107` | 6 |
 | `10.1038/s41598-021-93834-0` | 6 |
 | `10.3390/foods11020199` | 3 |
@@ -137,24 +140,39 @@ By source:
 | `bianchi_2026_s7` | 2.14 | 2.3401 | 3.35 | 11.1315 | None | None | `hydrocolloid_bread` |
 | `bianchi_2026_s8` | 1.97 | 2.274 | 5.67 | 14.6163 | None | None | `protein_enriched_bread` |
 | `bianchi_2026_s9` | 2.14 | 2.2753 | 1.83 | 12.9995 | None | None | `protein_enriched_bread` |
+| `ghodosipoor_2025_r01` | 2.03 | 2.7212 | 68.063 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r02` | 2.026 | 2.7212 | 66.5903 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r03` | 1.89 | 2.7212 | 66.0929 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r04` | 2.205 | 2.7212 | 69.0395 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r05` | 2.087 | 2.7212 | 71.007 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r06` | 2.5977 | 2.7212 | 53.6437 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r07` | 1.8473 | 2.6876 | 131.9171 | 9.7223 | None | None | `generic_gluten_free_bread` |
+| `ghodosipoor_2025_r08` | 1.7463 | 2.6975 | 108.2154 | 9.5469 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r09` | 2.2836 | 2.7444 | 47.976 | 8.7173 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r10` | 2.1045 | 2.7212 | 56.3108 | 9.1286 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r11` | 1.9444 | 2.6975 | 87.3368 | 9.5469 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r12` | 2.3163 | 2.7444 | 40.9026 | 8.7173 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_r13` | 2.466 | 2.7539 | 34.0761 | 8.5489 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_f1_opt` | 2.34 | 2.7305 | 53.565 | 8.9631 | None | None | `hydrocolloid_bread` |
+| `ghodosipoor_2025_f2_control` | 1.78 | 2.6876 | None | None | None | None | `generic_gluten_free_bread` |
 
 <!-- generated-end: bread-calibration-summary -->
 
 ## Interpretation
 
-The bread model is now connected to 45 measured bread outcomes from 8 peer-reviewed sources covering 4 process families. Key observations:
+The bread model is now connected to 60 measured bread outcomes from 9 peer-reviewed sources covering 5 process families. Key observations:
 
-**Specific volume** (30 records): MAE is 0.5054. The Kahraman 2022 chickpea-enriched records (2.51-2.89 cm3/g) are severely underpredicted (simulated as 1.66), revealing that chickpea protein gas-retention enhancement is not captured by the current model. The Wojcik 2021 pea-protein dose-response and the Belorio 2020 rice/HPMC underprediction remain as previously identified gaps.
+**Specific volume** (54 records): MAE is 0.4862. Ghodosipoor 2025 adds quinoa/HPMC/TG records and shifts the main visible error toward overprediction for quinoa breads (simulated around 2.69-2.75 cm3/g vs measured 1.75-2.60 cm3/g). The Kahraman 2022 chickpea-enriched records remain underpredicted, and the Belorio 2020 rice/HPMC and Wojcik 2021 pea-protein gaps remain useful diagnostics.
 
-**Crumb hardness** (17 records): MAE is 5.73 N after the issue #8 hydrocolloid-specific modifiers and issue #9 record additions. The Kahraman roasted chickpea record (5.49 N) is heavily overpredicted (simulated as 16.96 N), while the raw and dehulled chickpea records are closer. All three share the same simulation because processing state is not differentiated in the current ingredient model.
+**Crumb hardness** (40 records): MAE is 25.08 N. The increase is driven by Ghodosipoor 2025, where measured hardness ranges from 34.08 to 131.92 N while the simulator predicts about 8.55-9.72 N for the quinoa/HPMC/TG system. This is evidence of an unmodeled enzyme/hydrocolloid/quinoa structure mechanism, not a reason to blindly fit a global hardness offset.
 
-**Porosity** (11 records): MAE increased from 5.74 to 7.53, but bias improved from +5.74 to +0.82. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This bidirectional error suggests the porosity heuristic needs separate terms for hydrocolloid and protein contributions.
+**Porosity** (11 records): MAE remains 7.53 with bias +0.82 because Ghodosipoor 2025 does not report porosity in mapped records. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This bidirectional error suggests the porosity heuristic needs separate terms for hydrocolloid and protein contributions.
 
-The model captures approximate volume scale across four families. The weakest point remains ingredient-level detail: commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and protein ingredient processing state is not represented.
+The model captures approximate volume scale across several families, but the Ghodosipoor tranche makes clear that enzyme-treated quinoa/HPMC breads are outside the current hardness mechanism. The weakest points remain ingredient-level detail and process mechanism detail: TG enzyme effects are not represented, commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and protein ingredient processing state is not represented.
 
 ## Post-Expansion Systematic Bias Review
 
-This section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3) and 3 records from Kahraman 2022 (issue #9) and 9 records from Bianchi 2026 (issue #23). The expanded dataset (45 records, 8 sources, 4 families) enables cross-family bias comparison.
+This historical section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3), 3 records from Kahraman 2022 (issue #9), and 9 records from Bianchi 2026 (issue #23). It predates the Ghodosipoor 2025 issue #22 tranche. The current generated metrics above supersede the old counts; a heavier audit should refresh this cross-family bias review before more model changes.
 
 ### Volume bias by process family
 
@@ -192,7 +210,7 @@ The `model_confidence` coverage module correctly flags:
 - **Process families**: 4 of 4 bread families have records; no active Pane recipe lacks a family match
 - **Risk flags**: Candidate recipes using maize starch, tapioca, or unlisted protein powders would be flagged as outside ingredient coverage
 
-The coverage limitations in `coverage.py` remain accurate: strongest for specific volume, limited for hardness and porosity, and no table-backed specific volume for explicit hydrocolloid combinations (Parsamajd 2025).
+The coverage limitations in `coverage.py` remain directionally accurate: strongest for specific volume, limited for porosity, and hardness now broader but strongly biased for quinoa/HPMC/TG records. Parsamajd 2025 still lacks table-backed specific volume, while Ghodosipoor 2025 adds HPMC/TG response data without giving the simulator an enzyme mechanism.
 
 ### Actionable findings
 
@@ -214,9 +232,9 @@ The coverage limitations in `coverage.py` remain accurate: strongest for specifi
 ## Limitations
 
 - The model is diagnostic only and applies no fitted correction.
-- The dataset is still small: 45 records from 8 papers.
-- Specific volume MAE (0.5054) is driven by Belorio maize-starch+HPMC outlier (7.58 vs 2.11) and Kahraman chickpea underprediction (2.51-2.89 vs 1.66).
-- Hardness predictions are directionally correct but inaccurate in magnitude.
+- The dataset is still small: 60 records from 9 papers.
+- Specific volume MAE (0.4862) is driven by multiple family-specific errors, including quinoa/HPMC/TG overprediction and chickpea protein underprediction.
+- Hardness predictions are no longer directionally reliable for all families; Ghodosipoor 2025 shows severe underprediction for quinoa/HPMC/TG breads.
 - Porosity bias improved (+5.74 to +0.82) but MAE increased (5.74 to 7.53) as the model now both over- and under-predicts across different protein systems.
 - Some records use approximate ingredient mapping due to incomplete published formula disclosure.
-- The current model does not represent protein processing state, cultivar-specific functionality, or starch-type-specific functionality.
+- The current model does not represent TG enzyme effects, protein processing state, cultivar-specific functionality, or full starch/hydrocolloid source-specific functionality.

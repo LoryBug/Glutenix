@@ -53,9 +53,9 @@ class TestLiteratureCalibration:
             required_process_fields=("hydration_pct", "baking_time_min"),
         )
 
-        assert summary["record_count"] == 45
+        assert summary["record_count"] == 60
         assert summary["applications"] == ["Pane"]
-        assert summary["source_count"] == 8
+        assert summary["source_count"] == 9
         assert "specific_volume_cm3_g" in summary["metrics"]
         assert "crumb_hardness_n" in summary["metrics"]
         assert "porosity_pct" in summary["metrics"]
@@ -116,19 +116,20 @@ class TestLiteratureCalibration:
         finally:
             session.close()
 
-        assert result["n_records"] == 45
-        assert result["source_count"] == 8
+        assert result["n_records"] == 60
+        assert result["source_count"] == 9
         assert result["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in result["metric_summaries"]
         assert "crumb_hardness_n" in result["metric_summaries"]
         assert "porosity_pct" in result["metric_summaries"]
         assert result["record_groups"]["process_family"] == {
             "commercial_mix_bread": 4,
-            "hydrocolloid_bread": 16,
+            "generic_gluten_free_bread": 2,
+            "hydrocolloid_bread": 29,
             "millet_cultivar_bread": 9,
             "protein_enriched_bread": 16,
         }
-        assert len(result["rows"]) == 45
+        assert len(result["rows"]) == 60
         assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
 
     def test_literature_coverage_summary(self):
@@ -140,8 +141,8 @@ class TestLiteratureCalibration:
 
         assert set(result["domains"]) == {"pasta_cooking", "bread_baking"}
         bread = result["domains"]["bread_baking"]
-        assert bread["record_count"] == 45
-        assert bread["source_count"] == 8
+        assert bread["record_count"] == 60
+        assert bread["source_count"] == 9
         assert "hydration_pct" in bread["process_ranges"]
         assert "hydrocolloid_bread" in bread["process_families"]
         assert "HPMC (Hydroxypropyl Methylcellulose)" in bread["covered_ingredients"]
