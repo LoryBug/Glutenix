@@ -53,9 +53,9 @@ class TestLiteratureCalibration:
             required_process_fields=("hydration_pct", "baking_time_min"),
         )
 
-        assert summary["record_count"] == 33
+        assert summary["record_count"] == 36
         assert summary["applications"] == ["Pane"]
-        assert summary["source_count"] == 6
+        assert summary["source_count"] == 7
         assert "specific_volume_cm3_g" in summary["metrics"]
         assert "crumb_hardness_n" in summary["metrics"]
         assert "porosity_pct" in summary["metrics"]
@@ -116,8 +116,8 @@ class TestLiteratureCalibration:
         finally:
             session.close()
 
-        assert result["n_records"] == 33
-        assert result["source_count"] == 6
+        assert result["n_records"] == 36
+        assert result["source_count"] == 7
         assert result["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in result["metric_summaries"]
         assert "crumb_hardness_n" in result["metric_summaries"]
@@ -126,9 +126,9 @@ class TestLiteratureCalibration:
             "commercial_mix_bread": 4,
             "hydrocolloid_bread": 13,
             "millet_cultivar_bread": 9,
-            "protein_enriched_bread": 7,
+            "protein_enriched_bread": 10,
         }
-        assert len(result["rows"]) == 33
+        assert len(result["rows"]) == 36
         assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
 
     def test_literature_coverage_summary(self):
@@ -140,8 +140,8 @@ class TestLiteratureCalibration:
 
         assert set(result["domains"]) == {"pasta_cooking", "bread_baking"}
         bread = result["domains"]["bread_baking"]
-        assert bread["record_count"] == 33
-        assert bread["source_count"] == 6
+        assert bread["record_count"] == 36
+        assert bread["source_count"] == 7
         assert "hydration_pct" in bread["process_ranges"]
         assert "hydrocolloid_bread" in bread["process_families"]
         assert "HPMC (Hydroxypropyl Methylcellulose)" in bread["covered_ingredients"]

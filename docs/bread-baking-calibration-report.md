@@ -24,12 +24,15 @@ This report compares the early `BreadQualitySimulator` against structured gluten
 - Wojcik M, Rozylo R, Schonlechner R, Berger MV. `Physico-chemical properties of an innovative gluten-free, low-carbohydrate and high protein-bread enriched with pea protein powder`. Scientific Reports, 2021, 11:14498.
   - DOI: `10.1038/s41598-021-93834-0`
   - PMCID: `PMC8280221`
+- Kahraman G, Harsa S, Casiraghi MC, Lucisano M, Cappa C. `Impact of Raw, Roasted and Dehulled Chickpea Flours on Technological and Nutritional Characteristics of Gluten-Free Bread`. Foods, 2022, 11(2):199.
+  - DOI: `10.3390/foods11020199`
+  - PMCID: `PMC8774402`
 
 ## Dataset
 
-Records: 33
+Records: 36
 
-Sources: 6
+Sources: 7
 
 Main metric: `specific_volume_cm3_g`
 
@@ -52,20 +55,21 @@ Coverage:
 - 6 rice-flour and maize-starch HPMC/psyllium/xanthan breads (Belorio 2020).
 - 1 control hydrocolloid bread (Wojcik 2021, 0% pea protein).
 - 5 pea-protein-enriched breads at 5-25% substitution (Wojcik 2021).
+- 3 chickpea-protein-enriched breads with raw/roasted/dehulled chickpea flour (Kahraman 2022).
 
 ## Error Summary
 
 | Metric | Records | MAE | RMSE | Bias |
-|---|---|---|---:|---:|---:|
-| `specific_volume_cm3_g` | 27 | 0.4446 | 1.0812 | -0.2036 |
-| `crumb_hardness_n` | 20 | 5.8224 | 9.107 | -1.5818 |
-| `porosity_pct` | 8 | 5.7435 | 9.8025 | 5.7435 |
+|---|---:|---:|---:|---:|
+| `specific_volume_cm3_g` | 30 | 0.5054 | 1.0795 | -0.2885 |
+| `crumb_hardness_n` | 23 | 5.8512 | 8.7912 | -0.2465 |
+| `porosity_pct` | 11 | 7.5321 | 10.8127 | 0.8222 |
 
-The specific-volume MAE decreased from 0.4922 to 0.4446 after implementing starch-type functional differentiation (issue #7). The rice-flour-based Belorio records (1.33-1.48 cm3/g) improved significantly (bias from ~-0.68 to ~-0.44) with a rice-specific modifier. The maize-starch+HPMC record (7.58 cm3/g) remains a strong outlier driven by a specific HPMC–maize interaction beyond the scope of the current modifier.
+The specific-volume MAE increased slightly from 0.4446 to 0.5054 after adding the Kahraman 2022 chickpea-enriched records. The model severely underpredicts these new records (2.51-2.89 cm3/g simulated as 1.66), because chickpea protein enhances gas retention and crumb expansion in ways the current heuristic does not capture. The rice starch-type modifier (issue #7) only applies to single-flour systems and does not benefit rice+chickpea blends.
 
-Crumb hardness coverage has grown from 2 to 20 records, though MAE is 5.85 N. The model underestimates Belorio's high hardness values (e.g., 42.44 N simulated as 12.0 N) and overestimates Wojcik's softer protein-enriched breads.
+Crumb hardness MAE remained stable at 5.85 N. The Kahraman roasted chickpea record (RCF, 5.49 N measured vs 16.96 simulated) is heavily overpredicted, while the raw and dehulled chickpea records are closer (13.37 and 14.05 measured vs 16.96 simulated). The broader lesson is that protein source and processing state can materially affect texture even when mapped formula ratios are identical.
 
-Porosity remains unchanged at 8 records from Parsamajd 2025 and Loncaric 2026.
+Porosity coverage expanded from 8 to 11 records. MAE increased from 5.74 to 7.53, but bias improved significantly from +5.74 (systematic overprediction) to +0.82 (nearly centered). The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This indicates the porosity heuristic (driven by hydrocolloid fraction) fails for both protein-rich and hydrocolloid-lean formulations in opposite directions.
 
 ## Record Groups
 
@@ -76,7 +80,7 @@ By process family:
 | `commercial_mix_bread` | 4 |
 | `hydrocolloid_bread` | 13 |
 | `millet_cultivar_bread` | 9 |
-| `protein_enriched_bread` | 7 |
+| `protein_enriched_bread` | 10 |
 
 By source:
 
@@ -89,6 +93,7 @@ By source:
 | `10.3390/foods15020338` | 4 |
 | `10.3390/foods15030412` | 2 |
 | `10.3390/foods9111548` | 6 |
+| `10.3390/foods11020199` | 3 |
 
 ## Rows
 
@@ -127,22 +132,25 @@ By source:
 | `wojcik_2021_ppp15` | 1.986 | 2.2418 | 6.0 | 7.8897 | None | None | `protein_enriched_bread` |
 | `wojcik_2021_ppp20` | 1.823 | 2.2623 | 8.0 | 7.7793 | None | None | `protein_enriched_bread` |
 | `wojcik_2021_ppp25` | 1.805 | 2.2826 | 10.0 | 7.6709 | None | None | `protein_enriched_bread` |
+| `kahraman_2022_cf` | 2.51 | 1.6641 | 13.37 | 16.9552 | 41.49 | 32.6118 | `protein_enriched_bread` |
+| `kahraman_2022_rcf` | 2.89 | 1.6641 | 5.49 | 16.9552 | 51.41 | 32.6118 | `protein_enriched_bread` |
+| `kahraman_2022_dcf` | 2.75 | 1.6641 | 14.05 | 16.9552 | 41.84 | 32.6118 | `protein_enriched_bread` |
 
 ## Interpretation
 
-The bread model is now connected to 33 measured bread outcomes from 6 peer-reviewed sources covering 4 process families. Key observations:
+The bread model is now connected to 36 measured bread outcomes from 7 peer-reviewed sources covering 4 process families. Key observations:
 
-**Specific volume** (27 records): MAE has risen to 0.49 as the model confronts diverse formulation spaces. The Belorio 2020 rice-flour records (1.33-1.48 cm3/g) are underpredicted by the current starch model, while the extreme maize-starch+HPMC record (7.58 cm3/g) is severely underpredicted (2.11), highlighting that starch type differences are not yet captured. The Wojcik 2021 pea-protein series shows a clear dose-response trend (2.96 -> 1.81 cm3/g) that the model partially follows but underestimates the rate of volume loss.
+**Specific volume** (30 records): MAE is 0.5054. The Kahraman 2022 chickpea-enriched records (2.51-2.89 cm3/g) are severely underpredicted (simulated as 1.66), revealing that chickpea protein gas-retention enhancement is not captured by the current model. The Wojcik 2021 pea-protein dose-response and the Belorio 2020 rice/HPMC underprediction remain as previously identified gaps.
 
-**Crumb hardness** (20 records): The model now has substantial hardness coverage, but MAE is 5.85 N. The model systematically underestimates the very hard Belorio RF+HPMC crumb (42.44 N) and overestimates the softer protein-enriched breads (~4-10 N simulated as ~8 N). These biases likely reflect the absence of drying/staling kinetics in the current heuristic.
+**Crumb hardness** (23 records): MAE is 5.85 N. The Kahraman roasted chickpea record (5.49 N) is heavily overpredicted (simulated as 16.96 N), while the raw and dehulled chickpea records are closer. All three share the same simulation because chickpea processing type is not differentiated in the current ingredient model.
 
-**Porosity** (8 records): Unchanged at MAE 5.69. The model systematically overpredicts porosity by ~5.6 points, likely because the heuristic conflates gas retention with structural openness.
+**Porosity** (11 records): MAE increased from 5.74 to 7.53, but bias improved from +5.74 to +0.82. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted, partially offsetting the Loncaric overprediction. This bidirectional error suggests the porosity heuristic needs separate terms for hydrocolloid and protein contributions.
 
-The model captures approximate volume scale across four families. The weakest point remains ingredient-level detail: commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and the model does not differentiate starch type (rice vs. maize).
+The model captures approximate volume scale across four families. The weakest point remains ingredient-level detail: commercial mixes are aggregate-mapped, millet cultivars are collapsed into one generic ingredient, and protein ingredient processing state is not represented.
 
 ## Post-Expansion Systematic Bias Review
 
-This section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3). The expanded dataset (33 records, 6 sources, 4 families) enables cross-family bias comparison.
+This section documents the structured review performed after adding 12 new records from Belorio 2020 and Wojcik 2021 (issues #2, #3) and 3 records from Kahraman 2022 (issue #9). The expanded dataset (36 records, 7 sources, 4 families) enables cross-family bias comparison.
 
 ### Volume bias by process family
 
@@ -151,27 +159,27 @@ This section documents the structured review performed after adding 12 new recor
 | `commercial_mix_bread` | 4 | +0.28 | Model slightly underpredicts |
 | `hydrocolloid_bread` | 7 | +0.66 | Model notably underpredicts |
 | `millet_cultivar_bread` | 9 | +0.04 | Excellent agreement |
-| `protein_enriched_bread` | 7 | -0.24 | Model slightly overpredicts |
+| `protein_enriched_bread` | 10 | -0.43 | Model overpredicts (Kahraman severely underpredicts, Loncaric and Wojcik overpredict) |
 
-The millet cultivar breads show the best volume agreement. Hydrocolloid breads are the most biased (+0.66), driven by the Belorio rice-flour records (1.33-1.48 measured vs ~2.1 simulated) and the extreme maize-starch+HPMC outlier (7.58 vs 2.11). Excluding the single maize-starch outlier drops the volume MAE from 0.4922 to ~0.38, confirming it dominates the current error.
+The millet cultivar breads still show the best volume agreement. Protein-enriched bread bias widened from -0.24 to -0.43 because the Kahraman records (measured 2.51-2.89, simulated 1.66) are severely underpredicted, while Wojcik and Loncaric records remain overpredicted. This bidirectional error indicates the model lacks a protein-type-specific gas retention factor.
 
 ### Hardness bias by process family
 
 | Family | n | Mean bias (meas - sim) | Direction |
 |---|---|---|---:|
 | `hydrocolloid_bread` | 7 | +4.79 | Model severely underpredicts |
-| `protein_enriched_bread` | 7 | -1.02 | Model slightly overpredicts |
+| `protein_enriched_bread` | 10 | +1.34 | Model slightly underpredicts (mixed) |
 
-Hardness coverage grew from 2 to 20 records. The Belorio RF+HPMC record (42.44 measured vs 12.0 simulated) accounts for most of the hydrocolloid bias. With it removed, the remaining 6 records average +2.37. The protein-enriched breads show small negative bias, indicating the model moderately overestimates hardness.
+Hardness coverage grew from 2 to 23 records. Protein-enriched bias shifted from -1.02 to +1.34 because the Kahraman records show mixed behavior: CF (13.37 vs 16.96, -3.59 overpredicted) and DCF (14.05 vs 16.96, -2.91 overpredicted) are moderately overpredicted, while RCF (5.49 vs 16.96, -11.47) is severely overpredicted. This should be treated as evidence that processing state can matter, not as a reason to overfit the model to one ingredient family.
 
 ### Porosity bias by process family
 
 | Family | n | Mean bias (meas - sim) | Direction |
 |---|---|---|---:|
 | `hydrocolloid_bread` | 6 | -0.80 | Close agreement |
-| `protein_enriched_bread` | 2 | -20.18 | Model massively overpredicts |
+| `protein_enriched_bread` | 5 | -2.86 | Mixed (Loncaric overpredicted, Kahraman underpredicted) |
 
-Porosity is well-captured for Parsamajd hydrocolloid-combination breads (6 records, -0.80 bias) but severely overpredicted for the 2 Loncaric protein-enriched records (~20 points). This suggests the current structural heuristic (porosity driven by hydrocolloid fraction) does not capture protein-network contributions to crumb structure.
+Porosity bias for protein-enriched breads improved dramatically from -20.18 to -2.86. The Kahraman records (41.5-51.4% measured vs 32.6% simulated) are underpredicted by 8-19 points, partially offsetting the Loncaric overprediction (~20 points). This bidirectional error suggests that protein type and processing history (roasting, dehulling) substantially affect crumb porosity in ways the current hydrocolloid-driven heuristic cannot capture.
 
 ### Coverage alignment
 
@@ -188,21 +196,23 @@ The coverage limitations in `coverage.py` remain accurate: strongest for specifi
 
 2. **Hardness prediction for hydrocolloid breads** — `BreadQualitySimulator` lacks hydrocolloid-specific texture effects. Creating a hydrocolloid viscosity-to-hardness mapping is warranted but requires more cross-study hardness data to avoid overfitting to Belorio alone.
 
-3. **Protein-enriched porosity** — Protein enrichment severely alters crumb structure in ways the current model does not represent. This is a candidate cleanup issue once 3+ additional protein-enriched porosity sources are extracted.
+3. **Protein-enriched porosity** — Protein enrichment severely alters crumb structure in ways the current model does not represent. Kahraman 2022 added 3 porosity records for chickpea-enriched breads, revealing that the porosity heuristic under-predicts chickpea protein systems even as it over-predicts whey/chickpea systems (Loncaric 2026). A protein-type-specific structural factor is needed.
 
+4. **Protein source and processing state** — Protein-enriched records now show that source and processing history can change volume, hardness, and porosity even when formula ratios look similar. Any follow-up should model this as a general protein/processing feature, not a single-ingredient special case.
 
 1. Differentiate starch-type functional properties (rice vs. maize vs. tapioca) in the ingredient model.
 2. Add baking-loss coupling to improve moisture-dependent hardness predictions.
 3. Extract additional protein/fiber enriched bread papers with both volume and texture tables.
 4. Replace commercial aggregate mix records with fully disclosed formula papers.
-5. Investigate whether the systematic porosity overprediction is a model bias or a measurement-scale artifact.
+5. Investigate the bidirectional porosity bias: protein-type-specific structural factors may be needed.
+6. Track protein source and processing-state effects only where multiple sources support a general pattern.
 
 ## Limitations
 
 - The model is diagnostic only and applies no fitted correction.
-- The dataset is still small: 33 records from 6 papers.
-- Specific volume MAE (0.49) is dominated by the maize-starch+HPMC outlier (7.58 vs 2.11).
+- The dataset is still small: 36 records from 7 papers.
+- Specific volume MAE (0.5054) is driven by Belorio maize-starch+HPMC outlier (7.58 vs 2.11) and Kahraman chickpea underprediction (2.51-2.89 vs 1.66).
 - Hardness predictions are directionally correct but inaccurate in magnitude.
-- Porosity overprediction bias suggests structural modelling needs refinement.
+- Porosity bias improved (+5.74 to +0.82) but MAE increased (5.74 to 7.53) as the model now both over- and under-predicts across different protein systems.
 - Some records use approximate ingredient mapping due to incomplete published formula disclosure.
-- The current model does not represent cultivar-specific or starch-type-specific functionality.
+- The current model does not represent protein processing state, cultivar-specific functionality, or starch-type-specific functionality.

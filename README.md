@@ -174,10 +174,10 @@ Current sources include:
 
 Current bread baking diagnostic dataset:
 
-- 33 records.
-- 6 peer-reviewed sources.
+- 36 records.
+- 7 peer-reviewed sources.
 - Main metric: `specific_volume_cm3_g`.
-- Auxiliary metrics include limited crumb hardness, porosity, moisture, water activity, and structure fields where available.
+- Auxiliary metrics include crumb hardness, porosity, moisture, water activity, and structure fields where available.
 
 Current bread sources include:
 
@@ -185,6 +185,9 @@ Current bread sources include:
 - Torres-Perez et al. 2026: additive-removal clean-label gluten-free bread.
 - Loncaric et al. 2026: rice/whey and rice/chickpea gluten-free bread staling.
 - Parsamajd et al. 2025: HPMC/xanthan/guar hydrocolloid-combination gluten-free breads.
+- Belorio and Gomez 2020: hydration effects in rice/maize HPMC/psyllium/xanthan breads.
+- Wojcik et al. 2021: pea-protein-enriched buckwheat/flaxseed gluten-free bread.
+- Kahraman et al. 2022: raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
 
 Important limitation: the linear correction in calibration reports is diagnostic only. It is not treated as production calibration.
 

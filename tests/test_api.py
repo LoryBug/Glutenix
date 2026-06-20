@@ -220,15 +220,15 @@ class TestCalibration:
         resp = client.get("/calibration/bread-baking")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["n_records"] == 33
-        assert data["source_count"] == 6
+        assert data["n_records"] == 36
+        assert data["source_count"] == 7
         assert data["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in data["metric_summaries"]
         assert "porosity_pct" in data["metric_summaries"]
         assert data["record_groups"]["process_family"]["millet_cultivar_bread"] == 9
         assert data["record_groups"]["process_family"]["hydrocolloid_bread"] == 13
-        assert data["record_groups"]["process_family"]["protein_enriched_bread"] == 7
-        assert len(data["rows"]) == 33
+        assert data["record_groups"]["process_family"]["protein_enriched_bread"] == 10
+        assert len(data["rows"]) == 36
 
     def test_literature_coverage(self):
         resp = client.get("/calibration/coverage")
@@ -236,7 +236,7 @@ class TestCalibration:
         data = resp.json()
         assert set(data["domains"]) == {"pasta_cooking", "bread_baking"}
         assert data["domains"]["pasta_cooking"]["record_count"] == 40
-        assert data["domains"]["bread_baking"]["record_count"] == 33
+        assert data["domains"]["bread_baking"]["record_count"] == 36
         assert "hydration_pct" in data["domains"]["bread_baking"]["process_ranges"]
         assert "water_to_flour_ratio" in data["domains"]["pasta_cooking"]["process_ranges"]
 
