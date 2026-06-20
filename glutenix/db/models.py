@@ -94,6 +94,10 @@ class Ingredient(Base):
     saturated_fat_pct: Mapped[Optional[float]] = mapped_column(Float, comment="of which saturated fat")
     sodium_mg_per_100g: Mapped[Optional[float]] = mapped_column(Float, comment="Sodium in mg per 100g")
 
+    starch_type: Mapped[Optional[str]] = mapped_column(
+        String(20), comment="rice | maize | tapioca | potato | millet | buckwheat | None (generic)"
+    )
+
     extra_properties: Mapped[Optional[str]] = mapped_column(
         Text, comment="JSON for uncommon properties"
     )

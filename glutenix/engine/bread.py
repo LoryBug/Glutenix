@@ -39,6 +39,16 @@ class BreadQualityResult:
     crust_temp_c: float
 
 
+STARCH_VOLUME_MODIFIERS: dict[str, float] = {
+    "rice": -0.25,
+    "maize": +0.10,
+    "tapioca": +0.05,
+    "potato": +0.05,
+    "millet": -0.02,
+    "buckwheat": -0.05,
+}
+
+
 class BreadQualitySimulator:
     def __init__(self, params: BreadQualityParams | None = None):
         self.params = params or BreadQualityParams()
@@ -108,6 +118,10 @@ class BreadQualitySimulator:
         leavening_boost = 0.28 * float(np.tanh(p.chemical_leavening_pct / 1.0))
         emulsifier_effect = -0.16 * float(np.tanh(p.emulsifier_pct / 0.3))
 
+        starch_mod = STARCH_VOLUME_MODIFIERS.get(blend_props.dominant_starch_type, 0.0)
+        if blend_props.starch_fraction > 0:
+            starch_mod *= min(blend_props.starch_fraction, 1.0)
+
         specific_volume = (
             1.20
             + 1.15 * fermentation_volume
@@ -117,6 +131,7 @@ class BreadQualitySimulator:
             + 0.55 * commercial_mix
             + leavening_boost
             + emulsifier_effect
+            + starch_mod
             - 0.28 * chickpea
             - 0.18 * millet
             + 0.10 * whey
