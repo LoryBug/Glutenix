@@ -9,8 +9,10 @@ import io
 import json
 import math
 import random
+import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +20,8 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
-from glutenix.db.base import Base
-from glutenix.db.models import Ingredient
+from glutenix.db.base import Base, SessionLocal
+from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 from glutenix.engine.blend import BlendCalculator, BlendProperties
 from glutenix.engine.bread import BreadQualityParams, BreadQualityResult, BreadQualitySimulator
@@ -143,6 +145,89 @@ def rank_pane_candidates(
             session.close()
 
 
+def save_pane_run(
+    *,
+    db: Session,
+    preset: str,
+    seed: int | None,
+    n_blend_samples: int,
+    n_process_samples: int,
+    top: int,
+    candidates: list[PaneRankCandidate],
+    notes: str | None = None,
+    process_bounds: ProcessBounds = ProcessBounds(),
+    git_commit: str | None = None,
+) -> SimulationRun:
+    application = db.query(Application).filter(Application.name == "Pane").first()
+    run = SimulationRun(
+        application_id=application.id if application else None,
+        application_name="Pane",
+        source="cli.rank-pane",
+        preset=preset,
+        seed=seed,
+        blend_samples=n_blend_samples,
+        process_samples=n_process_samples,
+        top_n=top,
+        process_bounds=json.dumps(_process_bounds_dict(process_bounds), sort_keys=True),
+        parameters=json.dumps({
+            "preset": preset,
+            "seed": seed,
+            "blend_samples": n_blend_samples,
+            "process_samples": n_process_samples,
+            "top": top,
+        }, sort_keys=True),
+        git_commit=git_commit or _current_git_commit(),
+        notes=notes,
+    )
+    db.add(run)
+    db.flush()
+    for candidate in candidates:
+        db.add(SimulationCandidate(
+            run_id=run.id,
+            rank=candidate.rank,
+            score=candidate.score,
+            process_score=candidate.process_score,
+            blend_score=candidate.blend_score,
+            flavor_score=candidate.flavor_score,
+            proportions=json.dumps(candidate.proportions, sort_keys=True),
+            process=json.dumps(candidate.process, sort_keys=True),
+            properties=json.dumps(candidate.properties, sort_keys=True),
+            metrics=json.dumps(candidate.bread_metrics, sort_keys=True),
+            confidence=json.dumps(candidate.model_confidence, sort_keys=True),
+            risk_flags=json.dumps(candidate.model_confidence.get("risk_flags", [])),
+        ))
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def list_saved_runs(db: Session, limit: int = 20) -> list[SimulationRun]:
+    return (
+        db.query(SimulationRun)
+        .order_by(SimulationRun.created_at.desc(), SimulationRun.id.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def mark_candidate(
+    *,
+    db: Session,
+    candidate_id: int,
+    status: str,
+    notes: str | None = None,
+) -> SimulationCandidate:
+    candidate = db.get(SimulationCandidate, candidate_id)
+    if candidate is None:
+        raise ValueError(f"Simulation candidate not found: {candidate_id}")
+    candidate.status = status
+    if notes is not None:
+        candidate.decision_notes = notes
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
 def _rank_pane_candidates(
     *,
     session: Session,
@@ -254,6 +339,41 @@ def _seeded_session() -> Session:
         _seed_applications(session)
     session.commit()
     return session
+
+
+def _persistent_session() -> Session:
+    session = SessionLocal()
+    Base.metadata.create_all(session.get_bind())
+    with contextlib.redirect_stdout(io.StringIO()):
+        _seed_ingredients(session)
+        _seed_applications(session)
+    session.commit()
+    return session
+
+
+def _current_git_commit() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short=12", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return result.stdout.strip() or None
+
+
+def _process_bounds_dict(bounds: ProcessBounds) -> dict[str, dict[str, float]]:
+    return {
+        "fermentation_temp_c": {"min": bounds.fermentation_temp_c[0], "max": bounds.fermentation_temp_c[1]},
+        "fermentation_duration_min": {
+            "min": bounds.fermentation_duration_min[0],
+            "max": bounds.fermentation_duration_min[1],
+        },
+        "baking_temp_c": {"min": bounds.baking_temp_c[0], "max": bounds.baking_temp_c[1]},
+        "baking_duration_min": {"min": bounds.baking_duration_min[0], "max": bounds.baking_duration_min[1]},
+    }
 
 
 def _resolve_ingredients(
@@ -454,21 +574,107 @@ def _write_csv(path: Path, candidates: list[PaneRankCandidate]) -> None:
 
 
 def _rank_pane_command(args: argparse.Namespace) -> int:
-    candidates = rank_pane_candidates(
-        preset=args.preset,
-        n_blend_samples=args.blend_samples,
-        n_process_samples=args.process_samples,
-        top=args.top,
-        seed=args.seed,
-    )
-    _print_candidates(candidates)
-    if args.json:
-        _write_json(Path(args.json), candidates)
-        print(f"JSON written to {args.json}")
-    if args.csv:
-        _write_csv(Path(args.csv), candidates)
-        print(f"CSV written to {args.csv}")
+    session = _persistent_session() if args.save_run else None
+    try:
+        candidates = rank_pane_candidates(
+            preset=args.preset,
+            n_blend_samples=args.blend_samples,
+            n_process_samples=args.process_samples,
+            top=args.top,
+            seed=args.seed,
+            db=session,
+        )
+        _print_candidates(candidates)
+        if args.json:
+            _write_json(Path(args.json), candidates)
+            print(f"JSON written to {args.json}")
+        if args.csv:
+            _write_csv(Path(args.csv), candidates)
+            print(f"CSV written to {args.csv}")
+        if args.save_run:
+            assert session is not None
+            run = save_pane_run(
+                db=session,
+                preset=args.preset,
+                seed=args.seed,
+                n_blend_samples=args.blend_samples,
+                n_process_samples=args.process_samples,
+                top=args.top,
+                candidates=candidates,
+                notes=args.notes,
+            )
+            print(f"Saved run #{run.id} with {len(run.candidates)} candidates")
+    finally:
+        if session is not None:
+            session.close()
     return 0
+
+
+def _runs_list_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        runs = list_saved_runs(session, limit=args.limit)
+        print("id created_at application preset status candidates top_score notes")
+        for run in runs:
+            top_score = run.candidates[0].score if run.candidates else 0.0
+            created = _format_datetime(run.created_at)
+            notes = (run.notes or "").replace("\n", " ")[:40]
+            print(
+                f"{run.id:<4} {created:<19} {run.application_name:<11} "
+                f"{run.preset or '-':<17} {run.status:<8} {len(run.candidates):<10} "
+                f"{top_score:<8.4f} {notes}"
+            )
+    finally:
+        session.close()
+    return 0
+
+
+def _runs_show_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        run = session.get(SimulationRun, args.run_id)
+        if run is None:
+            raise SystemExit(f"Run not found: {args.run_id}")
+        print(f"Run #{run.id} {run.application_name} preset={run.preset} status={run.status}")
+        print(f"created_at={_format_datetime(run.created_at)} seed={run.seed} samples={run.blend_samples}x{run.process_samples} top={run.top_n}")
+        print(f"git_commit={run.git_commit or '-'} notes={run.notes or ''}")
+        print("candidate_id rank status score conf vol_cm3_g hard_N protein viscosity top_risk")
+        for candidate in run.candidates:
+            metrics = json.loads(candidate.metrics)
+            properties = json.loads(candidate.properties)
+            confidence = json.loads(candidate.confidence)
+            risks = json.loads(candidate.risk_flags or "[]")
+            top_risk = risks[0] if risks else "none"
+            print(
+                f"{candidate.id:<12} {candidate.rank:<4} {candidate.status:<9} "
+                f"{candidate.score:<5.3f} {confidence['level']:<6} "
+                f"{metrics['specific_volume_cm3_g']:<9.3f} "
+                f"{metrics['crumb_hardness_n']:<6.2f} "
+                f"{properties['protein_pct']:<7.2f} "
+                f"{properties['viscosity_index']:<9.3f} {top_risk}"
+            )
+    finally:
+        session.close()
+    return 0
+
+
+def _candidate_mark_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        candidate = mark_candidate(
+            db=session,
+            candidate_id=args.candidate_id,
+            status=args.status,
+            notes=args.notes,
+        )
+        print(f"Candidate #{candidate.id} marked {candidate.status}")
+    finally:
+        session.close()
+    return 0
+
+
+def _format_datetime(value: datetime) -> str:
+    return value.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -486,7 +692,30 @@ def build_parser() -> argparse.ArgumentParser:
     rank_pane.add_argument("--seed", type=int, default=None)
     rank_pane.add_argument("--json", help="Optional JSON output path.")
     rank_pane.add_argument("--csv", help="Optional CSV output path.")
+    rank_pane.add_argument("--save-run", action="store_true", help="Persist this run and its top candidates.")
+    rank_pane.add_argument("--notes", help="Optional notes stored with --save-run.")
     rank_pane.set_defaults(func=_rank_pane_command)
+
+    runs = subparsers.add_parser("runs", help="Inspect saved simulation runs.")
+    runs_subparsers = runs.add_subparsers(dest="runs_command", required=True)
+    runs_list = runs_subparsers.add_parser("list", help="List saved simulation runs.")
+    runs_list.add_argument("--limit", type=int, default=20)
+    runs_list.set_defaults(func=_runs_list_command)
+    runs_show = runs_subparsers.add_parser("show", help="Show a saved simulation run.")
+    runs_show.add_argument("run_id", type=int)
+    runs_show.set_defaults(func=_runs_show_command)
+
+    candidates = subparsers.add_parser("candidates", help="Annotate saved simulation candidates.")
+    candidates_subparsers = candidates.add_subparsers(dest="candidates_command", required=True)
+    candidate_mark = candidates_subparsers.add_parser("mark", help="Update candidate decision status.")
+    candidate_mark.add_argument("candidate_id", type=int)
+    candidate_mark.add_argument(
+        "--status",
+        required=True,
+        choices=["new", "promising", "avoid", "test_next", "tested", "archived"],
+    )
+    candidate_mark.add_argument("--notes", help="Decision notes for this candidate.")
+    candidate_mark.set_defaults(func=_candidate_mark_command)
 
     return parser
 

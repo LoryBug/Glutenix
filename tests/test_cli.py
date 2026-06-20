@@ -1,6 +1,14 @@
 import json
 
-from glutenix.cli import PRESETS, main, rank_pane_candidates
+from glutenix.cli import (
+    PRESETS,
+    list_saved_runs,
+    main,
+    mark_candidate,
+    rank_pane_candidates,
+    save_pane_run,
+)
+from glutenix.db.seed import _seed_applications, _seed_ingredients
 
 
 def test_rank_pane_candidates_returns_sorted_candidates():
@@ -49,3 +57,45 @@ def test_cli_rank_pane_writes_json(tmp_path):
 
 def test_pane_presets_reference_seeded_ingredient_names():
     assert {"sorghum-baseline", "bobs-inspired", "schaer-inspired"}.issubset(PRESETS)
+
+
+def test_save_list_and_mark_pane_run(db_session):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=2,
+        seed=11,
+        db=db_session,
+    )
+
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=11,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=2,
+        candidates=candidates,
+        notes="first DB-backed run",
+        git_commit="testcommit",
+    )
+
+    runs = list_saved_runs(db_session)
+    assert runs[0].id == run.id
+    assert runs[0].preset == "bobs-inspired"
+    assert len(runs[0].candidates) == 2
+    assert json.loads(runs[0].candidates[0].proportions)
+
+    marked = mark_candidate(
+        db=db_session,
+        candidate_id=runs[0].candidates[0].id,
+        status="test_next",
+        notes="promising protein and viscosity",
+    )
+    assert marked.status == "test_next"
+    assert marked.decision_notes == "promising protein and viscosity"
