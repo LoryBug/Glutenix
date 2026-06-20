@@ -147,8 +147,8 @@ Current sources:
 Current limitations:
 
 - Specific volume is the only broadly covered metric.
-- Crumb hardness has 26 structured records across five sources.
-- Porosity has 20 structured records across three sources (Kahraman 2022, Bianchi 2026, Parsamajd 2025), but values may depend strongly on image-analysis method.
+- Crumb hardness has 40 structured records across six sources.
+- Porosity has 11 structured records across three sources (Loncaric 2026, Parsamajd 2025, Kahraman 2022), but values may depend strongly on image-analysis method.
 - Bread coverage confidence now separates range coverage from mechanism/calibration reliability; TG/enzyme and sparse quinoa cases are downgraded even when numeric ranges pass.
 - Commercial bread mix records are aggregate-mapped because internal proportions are not disclosed.
 - Millet cultivar records share a generic `Millet flour` mapping, so cultivar-specific starch functionality is simplified.

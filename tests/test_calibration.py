@@ -47,24 +47,24 @@ class TestLiteratureCalibration:
         assert "swelling_index" in summary["metrics"]
 
     def test_validate_bread_literature_dataset_summary(self):
+        records = load_literature_records(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=(),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
         summary = validate_literature_dataset(
             DEFAULT_BREAD_DATASET,
             required_measured_metrics=(),
             required_process_fields=("hydration_pct", "baking_time_min"),
         )
 
-        assert summary["record_count"] == 60
+        assert summary["record_count"] == len(records)
         assert summary["applications"] == ["Pane"]
-        assert summary["source_count"] == 9
+        assert summary["source_count"] == len({record.source.get("doi") for record in records})
         assert "specific_volume_cm3_g" in summary["metrics"]
         assert "crumb_hardness_n" in summary["metrics"]
         assert "porosity_pct" in summary["metrics"]
 
-        records = load_literature_records(
-            DEFAULT_BREAD_DATASET,
-            required_measured_metrics=(),
-            required_process_fields=("hydration_pct", "baking_time_min"),
-        )
         belorio_records = [record for record in records if record.id.startswith("belorio_2020_")]
         assert len(belorio_records) == 6
         assert all("specific_volume_cm3_g" in record.measured for record in belorio_records)
@@ -110,14 +110,19 @@ class TestLiteratureCalibration:
         assert result["rows"][0]["pregelatinization_index"] > 0
 
     def test_compare_bread_baking_records(self):
+        records = load_literature_records(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=(),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
         session = _seeded_session()
         try:
             result = compare_bread_baking_records(session)
         finally:
             session.close()
 
-        assert result["n_records"] == 60
-        assert result["source_count"] == 9
+        assert result["n_records"] == len(records)
+        assert result["source_count"] == len({record.source.get("doi") for record in records})
         assert result["metric"] == "specific_volume_cm3_g"
         assert "specific_volume_cm3_g" in result["metric_summaries"]
         assert "crumb_hardness_n" in result["metric_summaries"]
@@ -131,7 +136,7 @@ class TestLiteratureCalibration:
             "millet_cultivar_bread": 9,
             "protein_enriched_bread": 16,
         }
-        assert len(result["rows"]) == 60
+        assert len(result["rows"]) == len(records)
         assert result["rows"][0]["simulated_specific_volume_cm3_g"] > 0
 
     def test_literature_coverage_summary(self):
@@ -143,8 +148,13 @@ class TestLiteratureCalibration:
 
         assert set(result["domains"]) == {"pasta_cooking", "bread_baking"}
         bread = result["domains"]["bread_baking"]
-        assert bread["record_count"] == 60
-        assert bread["source_count"] == 9
+        records = load_literature_records(
+            DEFAULT_BREAD_DATASET,
+            required_measured_metrics=(),
+            required_process_fields=("hydration_pct", "baking_time_min"),
+        )
+        assert bread["record_count"] == len(records)
+        assert bread["source_count"] == len({record.source.get("doi") for record in records})
         assert "hydration_pct" in bread["process_ranges"]
         assert "tg_pct" in bread["process_ranges"]
         assert "hydrocolloid_bread" in bread["process_families"]
