@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
+from glutenix.analysis.feedback import candidate_feedback
 from glutenix.analysis.flavor import explain_flavor
 from glutenix.calibration.coverage import (
     assess_literature_coverage,
@@ -438,35 +439,10 @@ def list_candidate_experiments(candidate_id: int, db: Session = Depends(get_db))
 
 @router.get("/simulation-candidates/{candidate_id}/feedback", response_model=CandidateFeedbackResponse)
 def get_candidate_feedback(candidate_id: int, db: Session = Depends(get_db)):
-    candidate = db.get(SimulationCandidate, candidate_id)
-    if candidate is None:
-        raise HTTPException(404, detail="Simulation candidate not found")
-    experiments = _linked_experiments(db, candidate_id)
-    predicted = _predicted_numeric_values(candidate)
-    comparisons: list[MetricComparisonResponse] = []
-    for experiment in experiments:
-        metrics = _json_or_none(experiment.metrics) or {}
-        for metric, measured in metrics.items():
-            if metric not in predicted or not isinstance(measured, int | float):
-                continue
-            predicted_value = predicted[metric]
-            absolute_delta = float(measured) - predicted_value
-            percent_delta = None if predicted_value == 0 else absolute_delta / predicted_value * 100
-            comparisons.append(MetricComparisonResponse(
-                metric=metric,
-                predicted=round(predicted_value, 4),
-                measured=round(float(measured), 4),
-                absolute_delta=round(absolute_delta, 4),
-                percent_delta=None if percent_delta is None else round(percent_delta, 2),
-            ))
-    return CandidateFeedbackResponse(
-        candidate_id=candidate.id,
-        run_id=candidate.run_id,
-        status=candidate.status,
-        experiment_count=len(experiments),
-        comparisons=comparisons,
-        summary=_feedback_summary(experiments, comparisons),
-    )
+    try:
+        return candidate_feedback(db, candidate_id)
+    except ValueError as exc:
+        raise HTTPException(404, detail="Simulation candidate not found") from exc
 
 
 @router.post("/compare/blends", response_model=BlendCompareResponse)
@@ -676,51 +652,6 @@ def _linked_experiments(db: Session, candidate_id: int) -> list[ExperimentResult
         if conditions.get("candidate_id") == candidate_id:
             linked.append(experiment)
     return linked
-
-
-def _predicted_numeric_values(candidate: SimulationCandidate) -> dict[str, float]:
-    values: dict[str, float] = {}
-    for payload in (
-        _json_or_none(candidate.metrics) or {},
-        _json_or_none(candidate.properties) or {},
-        {
-            "score": candidate.score,
-            "process_score": candidate.process_score,
-            "blend_score": candidate.blend_score,
-            "flavor_score": candidate.flavor_score,
-        },
-    ):
-        for key, value in payload.items():
-            if isinstance(value, int | float):
-                values[key] = float(value)
-    return values
-
-
-def _feedback_summary(
-    experiments: list[ExperimentResult],
-    comparisons: list[MetricComparisonResponse],
-) -> dict[str, Any]:
-    if not experiments:
-        return {
-            "status": "no_experiments",
-            "message": "No physical test results are linked to this candidate yet.",
-        }
-    if not comparisons:
-        return {
-            "status": "no_comparable_metrics",
-            "message": "Linked experiments exist, but no measured metric names match predicted numeric fields.",
-        }
-    abs_pct = [abs(item.percent_delta) for item in comparisons if item.percent_delta is not None]
-    mean_abs_percent_delta = None if not abs_pct else round(sum(abs_pct) / len(abs_pct), 2)
-    largest = max(comparisons, key=lambda item: abs(item.absolute_delta))
-    return {
-        "status": "compared",
-        "message": "Measured physical results were compared against saved simulation predictions.",
-        "experiment_count": len(experiments),
-        "metric_count": len(comparisons),
-        "mean_abs_percent_delta": mean_abs_percent_delta,
-        "largest_absolute_delta": largest.model_dump(),
-    }
 
 
 def _promote_candidate_to_blend(

@@ -10,6 +10,38 @@ from sqlalchemy.orm import Session
 from glutenix.db.models import ExperimentResult, SimulationCandidate, SimulationRun
 
 
+def candidate_feedback(db: Session, candidate_id: int) -> dict[str, Any]:
+    candidate = db.get(SimulationCandidate, candidate_id)
+    if candidate is None:
+        raise ValueError(f"Simulation candidate not found: {candidate_id}")
+    experiments = _linked_experiments(db, candidate_id)
+    predicted = _predicted_numeric_values(candidate)
+    comparisons = []
+    for experiment in experiments:
+        for metric, measured in _json(experiment.metrics).items():
+            if metric not in predicted or not isinstance(measured, int | float) or isinstance(measured, bool):
+                continue
+            predicted_value = predicted[metric]
+            absolute_delta = float(measured) - predicted_value
+            percent_delta = None if predicted_value == 0 else absolute_delta / predicted_value * 100
+            comparisons.append({
+                "metric": metric,
+                "predicted": round(predicted_value, 4),
+                "measured": round(float(measured), 4),
+                "absolute_delta": round(absolute_delta, 4),
+                "percent_delta": None if percent_delta is None else round(percent_delta, 2),
+            })
+    return {
+        "candidate_id": candidate.id,
+        "run_id": candidate.run_id,
+        "status": candidate.status,
+        "experiment_count": len(experiments),
+        "comparisons": comparisons,
+        "summary": _candidate_feedback_summary(experiments, comparisons),
+        "evidence_note": "Candidate feedback is diagnostic only; it does not recalibrate heuristic models automatically.",
+    }
+
+
 def experimental_feedback_summary(db: Session, application: str | None = None) -> dict[str, Any]:
     candidates = _candidate_map(db, application)
     linked_experiments: dict[int, list[ExperimentResult]] = defaultdict(list)
@@ -75,6 +107,42 @@ def _candidate_map(db: Session, application: str | None) -> dict[int, Simulation
     if application:
         query = query.join(SimulationCandidate.run).filter(SimulationRun.application_name == application)
     return {candidate.id: candidate for candidate in query.all()}
+
+
+def _linked_experiments(db: Session, candidate_id: int) -> list[ExperimentResult]:
+    linked = []
+    for experiment in db.query(ExperimentResult).order_by(ExperimentResult.created_at.desc(), ExperimentResult.id.desc()).all():
+        conditions = _json(experiment.conditions)
+        if conditions.get("candidate_id") == candidate_id:
+            linked.append(experiment)
+    return linked
+
+
+def _candidate_feedback_summary(
+    experiments: list[ExperimentResult],
+    comparisons: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not experiments:
+        return {
+            "status": "no_experiments",
+            "message": "No physical test results are linked to this candidate yet.",
+        }
+    if not comparisons:
+        return {
+            "status": "no_comparable_metrics",
+            "message": "Linked experiments exist, but no measured metric names match predicted numeric fields.",
+        }
+    abs_pct = [abs(item["percent_delta"]) for item in comparisons if item["percent_delta"] is not None]
+    mean_abs_percent_delta = None if not abs_pct else round(sum(abs_pct) / len(abs_pct), 2)
+    largest = max(comparisons, key=lambda item: abs(item["absolute_delta"]))
+    return {
+        "status": "compared",
+        "message": "Measured physical results were compared against saved simulation predictions.",
+        "experiment_count": len(experiments),
+        "metric_count": len(comparisons),
+        "mean_abs_percent_delta": mean_abs_percent_delta,
+        "largest_absolute_delta": largest,
+    }
 
 
 def _metric_summaries(comparisons: list[dict[str, Any]]) -> list[dict[str, Any]]:

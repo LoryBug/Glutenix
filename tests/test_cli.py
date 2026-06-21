@@ -705,6 +705,68 @@ def test_cli_experiments_record_links_candidate_feedback(db_session, monkeypatch
     assert payload["comparison_count"] == 2
 
 
+def test_cli_candidate_feedback_writes_json(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=20,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=20,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate_id = run.candidates[0].id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    main([
+        "experiments",
+        "record",
+        "--candidate-id",
+        str(candidate_id),
+        "--metric",
+        "specific_volume_cm3_g:2.45",
+        "--metric",
+        "crumb_hardness_n:11.2",
+        "--condition",
+        "dry_blend_g:500",
+    ])
+    output_path = tmp_path / "candidate-feedback.json"
+
+    exit_code = main([
+        "candidates",
+        "feedback",
+        str(candidate_id),
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["candidate_id"] == candidate_id
+    assert payload["experiment_count"] == 1
+    assert payload["summary"]["status"] == "compared"
+    compared_metrics = {row["metric"] for row in payload["comparisons"]}
+    assert {"specific_volume_cm3_g", "crumb_hardness_n"}.issubset(compared_metrics)
+
+
+def test_cli_candidate_feedback_rejects_missing_candidate(db_session, monkeypatch):
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+
+    with pytest.raises(SystemExit, match="Simulation candidate not found: 999"):
+        main(["candidates", "feedback", "999"])
+
+
 def test_cli_experiments_record_rejects_missing_candidate(db_session, monkeypatch):
     monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
 

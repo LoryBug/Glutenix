@@ -219,10 +219,11 @@ uv run glutenix experiments record --candidate-id 61 \
 Then summarize prediction error across experiments:
 
 ```bash
+uv run glutenix candidates feedback 61 --json tmp/candidate-61-feedback.json
 uv run glutenix feedback summary --application Pane --json tmp/pane-feedback-summary.json
 ```
 
-Experiment recording and feedback summaries are diagnostic only and do not recalibrate heuristic models automatically.
+Candidate feedback compares one candidate's measured metrics against saved predictions. Feedback summaries aggregate across linked experiments. Both are diagnostic only and do not recalibrate heuristic models automatically.
 
 The minimal reusable shape for extending this loop beyond bread is documented in `docs/application-workflow.md`. `Pane` is `operational_v1`; `Pasta fresca` is `experimental_v1` with separate metrics and evidence requirements.
 
