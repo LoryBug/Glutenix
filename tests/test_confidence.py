@@ -1,4 +1,4 @@
-from glutenix.engine.confidence import assess_candidate_confidence
+from glutenix.engine.confidence import ConfidenceTier, assess_candidate_confidence
 from glutenix.engine.targets import get_sweep_target_profile
 
 
@@ -23,6 +23,9 @@ class TestCandidateConfidence:
         assert confidence.level == "low"
         assert confidence.score < 0.5
         assert confidence.risk_flags
+        assert confidence.confidence_summary == ConfidenceTier.OOD_EXTRAPOLATION
+        assert confidence.risk_warnings
+        assert any(warning.tier == ConfidenceTier.OOD_EXTRAPOLATION for warning in confidence.risk_warnings)
         assert any("water_absorption" in flag for flag in confidence.risk_flags)
         assert any("Process score is weak" in flag for flag in confidence.risk_flags)
 
@@ -49,6 +52,7 @@ class TestCandidateConfidence:
 
         assert confidence.level == "high"
         assert confidence.score >= 0.75
+        assert confidence.confidence_summary == ConfidenceTier.CALIBRATED
         assert not confidence.risk_flags
         assert any("Pasta cooking model" in note for note in confidence.basis)
 
@@ -75,8 +79,13 @@ class TestCandidateConfidence:
         )
 
         assert confidence.score < 0.7
+        assert confidence.confidence_summary == ConfidenceTier.OOD_EXTRAPOLATION
         assert any("Literature coverage/OOD confidence: low" in note for note in confidence.basis)
         assert any("hydration_pct" in flag for flag in confidence.risk_flags)
+        assert any(
+            warning.severity == "high" and "hydration_pct" in warning.affected_variables
+            for warning in confidence.risk_warnings
+        )
 
     def test_low_literature_mechanism_caps_candidate_confidence(self):
         profile = get_sweep_target_profile("Pane")
@@ -103,6 +112,7 @@ class TestCandidateConfidence:
         )
 
         assert confidence.level == "low"
+        assert confidence.confidence_summary == ConfidenceTier.OOD_EXTRAPOLATION
         assert any("mechanism=0.00" in note for note in confidence.basis)
         assert any("tg_pct" in flag for flag in confidence.risk_flags)
 
@@ -130,4 +140,26 @@ class TestCandidateConfidence:
         )
 
         assert any("Bread quality model" in note for note in confidence.basis)
+        assert confidence.confidence_summary == ConfidenceTier.LITERATURE_INFORMED
         assert not any("No direct experimental calibration" in flag for flag in confidence.risk_flags)
+
+    def test_heuristic_application_without_calibration_is_structured(self):
+        profile = get_sweep_target_profile("Pizza")
+
+        confidence = assess_candidate_confidence(
+            blend_values={
+                "water_absorption": 1.5,
+                "viscosity_index": 2.0,
+                "hydrocolloid_pct": 0.02,
+                "fiber_pct": 4.0,
+                "fat_pct": 2.0,
+            },
+            profile=profile,
+            process_score=0.7,
+            blend_score=0.7,
+            flavor_score=0.7,
+        )
+
+        assert confidence.confidence_summary == ConfidenceTier.HEURISTIC
+        assert any(warning.tier == ConfidenceTier.HEURISTIC for warning in confidence.risk_warnings)
+        assert any("application" in warning.affected_variables for warning in confidence.risk_warnings)

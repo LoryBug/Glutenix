@@ -17,6 +17,17 @@ Current optimization integration:
 
 - `POST /optimize/application-suggest` includes coverage/OOD basis and risk flags inside `model_confidence`.
 
+`model_confidence` keeps the original scalar fields and adds structured confidence metadata:
+
+- `score`: 0-1 diagnostic confidence score, independent from candidate ranking score.
+- `level`: coarse legacy band, `low`, `medium`, or `high`.
+- `confidence_summary`: one of `calibrated`, `literature_informed`, `heuristic`, or `ood_extrapolation`.
+- `basis`: human-readable evidence notes.
+- `risk_flags`: legacy human-readable warnings.
+- `risk_warnings`: structured warnings with `tier`, `description`, `affected_variables`, and `severity`.
+
+The confidence tier is not a quality score. A candidate can rank well while still being `heuristic` or `ood_extrapolation` if the formula/process is outside structured evidence coverage.
+
 Current covered domains:
 
 - `pasta_cooking` for `Pasta fresca`.
