@@ -68,7 +68,7 @@ class BlendCreate(BaseModel):
     @model_validator(mode="after")
     def proportions_sum_to_one(self):
         total = sum(i.proportion for i in self.ingredients)
-        if abs(total - 1.0) > 1e-6:
+        if abs(total - 1.0) > 1e-3:
             raise ValueError(f"Proportions must sum to 1, got {total}")
         ids = [i.ingredient_id for i in self.ingredients]
         if len(ids) != len(set(ids)):
