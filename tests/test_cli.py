@@ -393,3 +393,56 @@ def test_cli_candidate_report_rejects_missing_candidate(db_session, monkeypatch)
 
     with pytest.raises(SystemExit, match="Simulation candidate not found: 999"):
         main(["candidates", "report", "999"])
+
+
+def test_cli_candidate_protocol_writes_markdown(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=16,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=16,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate_id = run.candidates[0].id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "candidate-protocol.md"
+
+    exit_code = main([
+        "candidates",
+        "protocol",
+        str(candidate_id),
+        "--batch-g",
+        "500",
+        "--markdown",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    markdown = output_path.read_text(encoding="utf-8")
+    assert f"# Physical-Test Protocol: Candidate #{candidate_id}" in markdown
+    assert "| **Total dry blend** | **100.00%** | **500.00** |" in markdown
+    assert "specific_volume_cm3_g" in markdown
+    assert "crumb_hardness_n" in markdown
+    assert "water_added_g" in markdown
+    assert "This protocol does not validate the candidate by itself." in markdown
+
+
+def test_cli_candidate_protocol_rejects_invalid_batch(db_session, monkeypatch):
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+
+    with pytest.raises(SystemExit, match="batch_g must be positive"):
+        main(["candidates", "protocol", "1", "--batch-g", "0"])
