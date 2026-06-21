@@ -19,6 +19,13 @@ from typing import Any
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
+from glutenix.api.routers.optimization import (
+    ApplicationSuggestRequest,
+    ApplicationSuggestResponse,
+    ProcessRange as ApplicationProcessRange,
+    SuggestIngredient,
+    suggest_for_application,
+)
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
 from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
@@ -145,6 +152,72 @@ def rank_pane_candidates(
             session.close()
 
 
+def rank_application_candidates(
+    *,
+    application: str,
+    bounds: list[IngredientBound],
+    n_blend_samples: int = 100,
+    n_process_samples: int = 20,
+    top: int = 10,
+    seed: int | None = None,
+    process_bounds: ProcessBounds = ProcessBounds(),
+    w_process: float = 0.55,
+    w_blend: float = 0.25,
+    w_flavor: float = 0.20,
+    db: Session | None = None,
+) -> ApplicationSuggestResponse:
+    if n_blend_samples < 1 or n_process_samples < 1 or top < 1:
+        raise ValueError("n_blend_samples, n_process_samples, and top must be positive")
+    if w_process < 0 or w_blend < 0 or w_flavor < 0:
+        raise ValueError("score weights must be non-negative")
+    if w_process + w_blend + w_flavor <= 0:
+        raise ValueError("at least one score weight must be positive")
+
+    own_session = db is None
+    session = db or _seeded_session()
+    try:
+        application_row = _resolve_application(session, application)
+        ingredients = _resolve_ingredients(session, bounds)
+        request = ApplicationSuggestRequest(
+            application_id=application_row.id,
+            ingredients=[
+                SuggestIngredient(
+                    ingredient_id=ingredient.id,
+                    min_proportion=min_proportion,
+                    max_proportion=max_proportion,
+                )
+                for ingredient, min_proportion, max_proportion in ingredients
+            ],
+            n_candidates=top,
+            n_blend_samples=n_blend_samples,
+            n_process_samples=n_process_samples,
+            seed=seed,
+            fermentation_temp=ApplicationProcessRange(
+                min=process_bounds.fermentation_temp_c[0],
+                max=process_bounds.fermentation_temp_c[1],
+            ),
+            fermentation_duration=ApplicationProcessRange(
+                min=process_bounds.fermentation_duration_min[0],
+                max=process_bounds.fermentation_duration_min[1],
+            ),
+            baking_temp=ApplicationProcessRange(
+                min=process_bounds.baking_temp_c[0],
+                max=process_bounds.baking_temp_c[1],
+            ),
+            baking_duration=ApplicationProcessRange(
+                min=process_bounds.baking_duration_min[0],
+                max=process_bounds.baking_duration_min[1],
+            ),
+            w_process=w_process,
+            w_blend=w_blend,
+            w_flavor=w_flavor,
+        )
+        return suggest_for_application(request, db=session)
+    finally:
+        if own_session:
+            session.close()
+
+
 def save_pane_run(
     *,
     db: Session,
@@ -195,6 +268,74 @@ def save_pane_run(
             metrics=json.dumps(candidate.bread_metrics, sort_keys=True),
             confidence=json.dumps(candidate.model_confidence, sort_keys=True),
             risk_flags=json.dumps(candidate.model_confidence.get("risk_flags", [])),
+        ))
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def save_application_run(
+    *,
+    db: Session,
+    result: ApplicationSuggestResponse,
+    preset: str,
+    seed: int | None,
+    n_blend_samples: int,
+    n_process_samples: int,
+    top: int,
+    notes: str | None = None,
+    process_bounds: ProcessBounds = ProcessBounds(),
+    weights: dict[str, float] | None = None,
+    git_commit: str | None = None,
+) -> SimulationRun:
+    application = db.query(Application).filter(Application.name == result.application).first()
+    parameters = {
+        "application": result.application,
+        "preset": preset,
+        "seed": seed,
+        "blend_samples": n_blend_samples,
+        "process_samples": n_process_samples,
+        "top": top,
+        "target_profile": result.target_profile,
+        "flavor_target": result.flavor_target,
+        "weights": weights or {"process": 0.55, "blend": 0.25, "flavor": 0.20},
+    }
+    run = SimulationRun(
+        application_id=application.id if application else None,
+        application_name=result.application,
+        source="cli.rank-application",
+        preset=preset,
+        seed=seed,
+        blend_samples=n_blend_samples,
+        process_samples=n_process_samples,
+        top_n=top,
+        process_bounds=json.dumps(_process_bounds_dict(process_bounds), sort_keys=True),
+        parameters=json.dumps(parameters, sort_keys=True),
+        git_commit=git_commit or _current_git_commit(),
+        notes=notes,
+    )
+    db.add(run)
+    db.flush()
+    for candidate in result.candidates:
+        data = candidate.model_dump()
+        metrics = data.get("bread_metrics") or data.get("cooking_metrics") or {
+            "volume_increase_pct": data.get("volume_increase_pct"),
+            "core_temp_c": data.get("core_temp_c"),
+            "crust_temp_c": data.get("crust_temp_c"),
+        }
+        db.add(SimulationCandidate(
+            run_id=run.id,
+            rank=data["rank"],
+            score=data["score"],
+            process_score=data["process_score"],
+            blend_score=data["blend_score"],
+            flavor_score=data["flavor_score"],
+            proportions=json.dumps(data["proportions"], sort_keys=True),
+            process=json.dumps(data["process"], sort_keys=True),
+            properties=json.dumps(data["properties"], sort_keys=True),
+            metrics=json.dumps(metrics, sort_keys=True),
+            confidence=json.dumps(data["model_confidence"], sort_keys=True),
+            risk_flags=json.dumps(data["model_confidence"].get("risk_flags", [])),
         ))
     db.commit()
     db.refresh(run)
@@ -392,6 +533,30 @@ def _resolve_ingredients(
     return items
 
 
+def _resolve_application(session: Session, application: str) -> Application:
+    row = session.query(Application).filter(Application.name == application).first()
+    if row is None:
+        available = ", ".join(app.name for app in session.query(Application).order_by(Application.name).all())
+        raise ValueError(f"Application not found: {application}. Available: {available}")
+    return row
+
+
+def _parse_ingredient_bound(value: str) -> IngredientBound:
+    try:
+        name, min_value, max_value = value.rsplit(":", 2)
+        min_proportion = float(min_value)
+        max_proportion = float(max_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "ingredient bounds must use 'Ingredient name:min:max', for example 'Sorghum flour:0.25:0.45'"
+        ) from exc
+    if not name.strip():
+        raise argparse.ArgumentTypeError("ingredient name cannot be empty")
+    if min_proportion < 0 or max_proportion > 1 or min_proportion > max_proportion:
+        raise argparse.ArgumentTypeError("ingredient min/max must satisfy 0 <= min <= max <= 1")
+    return IngredientBound(name.strip(), min_proportion, max_proportion)
+
+
 def _sample_bounded_proportions(
     items: list[tuple[Ingredient, float, float]],
     rng: random.Random,
@@ -529,6 +694,11 @@ def _write_json(path: Path, candidates: list[PaneRankCandidate]) -> None:
     )
 
 
+def _write_application_json(path: Path, result: ApplicationSuggestResponse) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result.model_dump(), indent=2), encoding="utf-8")
+
+
 def _write_csv(path: Path, candidates: list[PaneRankCandidate]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -573,6 +743,38 @@ def _write_csv(path: Path, candidates: list[PaneRankCandidate]) -> None:
             })
 
 
+def _print_application_candidates(result: ApplicationSuggestResponse) -> None:
+    print(f"application={result.application} target={result.target_profile} flavor={result.flavor_target}")
+    print("rank score conf process blend flavor protein viscosity primary_metric top_risk")
+    for candidate in result.candidates:
+        data = candidate.model_dump()
+        confidence = data["model_confidence"]
+        properties = data["properties"]
+        risks = confidence.get("risk_flags", [])
+        print(
+            f"{data['rank']:>4} "
+            f"{data['score']:>5.3f} "
+            f"{confidence['level']:<6} "
+            f"{data['process_score']:>7.3f} "
+            f"{data['blend_score']:>5.3f} "
+            f"{data['flavor_score']:>6.3f} "
+            f"{properties['protein_pct']:>7.2f} "
+            f"{properties['viscosity_index']:>9.3f} "
+            f"{_primary_metric(data):<22} "
+            f"{risks[0] if risks else 'none'}"
+        )
+
+
+def _primary_metric(candidate: dict[str, Any]) -> str:
+    bread = candidate.get("bread_metrics")
+    if bread:
+        return f"vol={bread['specific_volume_cm3_g']:.3f} hard={bread['crumb_hardness_n']:.2f}"
+    cooking = candidate.get("cooking_metrics")
+    if cooking:
+        return f"loss={cooking['cooking_loss_pct']:.2f} firm={cooking['firmness_index']:.2f}"
+    return f"vol_pct={candidate.get('volume_increase_pct', 0):.2f}"
+
+
 def _rank_pane_command(args: argparse.Namespace) -> int:
     session = _persistent_session() if args.save_run else None
     try:
@@ -610,6 +812,60 @@ def _rank_pane_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _rank_application_command(args: argparse.Namespace) -> int:
+    custom_bounds = [_parse_ingredient_bound(value) for value in args.ingredient]
+    if custom_bounds:
+        bounds = custom_bounds
+        preset = "custom"
+    else:
+        bounds = PRESETS[args.preset]
+        preset = args.preset
+    process_bounds = ProcessBounds(
+        fermentation_temp_c=tuple(args.fermentation_temp),
+        fermentation_duration_min=tuple(args.fermentation_duration),
+        baking_temp_c=tuple(args.baking_temp),
+        baking_duration_min=tuple(args.baking_duration),
+    )
+    session = _persistent_session() if args.save_run else None
+    try:
+        result = rank_application_candidates(
+            application=args.application,
+            bounds=bounds,
+            n_blend_samples=args.blend_samples,
+            n_process_samples=args.process_samples,
+            top=args.top,
+            seed=args.seed,
+            process_bounds=process_bounds,
+            w_process=args.w_process,
+            w_blend=args.w_blend,
+            w_flavor=args.w_flavor,
+            db=session,
+        )
+        _print_application_candidates(result)
+        if args.json:
+            _write_application_json(Path(args.json), result)
+            print(f"JSON written to {args.json}")
+        if args.save_run:
+            assert session is not None
+            run = save_application_run(
+                db=session,
+                result=result,
+                preset=preset,
+                seed=args.seed,
+                n_blend_samples=args.blend_samples,
+                n_process_samples=args.process_samples,
+                top=args.top,
+                notes=args.notes,
+                process_bounds=process_bounds,
+                weights={"process": args.w_process, "blend": args.w_blend, "flavor": args.w_flavor},
+            )
+            print(f"Saved run #{run.id} with {len(run.candidates)} candidates")
+    finally:
+        if session is not None:
+            session.close()
+    return 0
+
+
 def _runs_list_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -638,7 +894,7 @@ def _runs_show_command(args: argparse.Namespace) -> int:
         print(f"Run #{run.id} {run.application_name} preset={run.preset} status={run.status}")
         print(f"created_at={_format_datetime(run.created_at)} seed={run.seed} samples={run.blend_samples}x{run.process_samples} top={run.top_n}")
         print(f"git_commit={run.git_commit or '-'} notes={run.notes or ''}")
-        print("candidate_id rank status score conf vol_cm3_g hard_N protein viscosity top_risk")
+        print("candidate_id rank status score conf process blend flavor protein viscosity primary_metric top_risk")
         for candidate in run.candidates:
             metrics = json.loads(candidate.metrics)
             properties = json.loads(candidate.properties)
@@ -648,10 +904,12 @@ def _runs_show_command(args: argparse.Namespace) -> int:
             print(
                 f"{candidate.id:<12} {candidate.rank:<4} {candidate.status:<9} "
                 f"{candidate.score:<5.3f} {confidence['level']:<6} "
-                f"{metrics['specific_volume_cm3_g']:<9.3f} "
-                f"{metrics['crumb_hardness_n']:<6.2f} "
+                f"{candidate.process_score:<7.3f} "
+                f"{candidate.blend_score:<5.3f} "
+                f"{candidate.flavor_score:<6.3f} "
                 f"{properties['protein_pct']:<7.2f} "
-                f"{properties['viscosity_index']:<9.3f} {top_risk}"
+                f"{properties['viscosity_index']:<9.3f} "
+                f"{_saved_primary_metric(metrics):<22} {top_risk}"
             )
     finally:
         session.close()
@@ -677,6 +935,23 @@ def _format_datetime(value: datetime) -> str:
     return value.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _saved_primary_metric(metrics: dict[str, Any]) -> str:
+    if "specific_volume_cm3_g" in metrics:
+        return f"vol={metrics['specific_volume_cm3_g']:.3f} hard={metrics['crumb_hardness_n']:.2f}"
+    if "cooking_loss_pct" in metrics:
+        return f"loss={metrics['cooking_loss_pct']:.2f} firm={metrics['firmness_index']:.2f}"
+    if "volume_increase_pct" in metrics:
+        return f"vol_pct={metrics['volume_increase_pct']:.2f}"
+    return "-"
+
+
+def _add_process_bound_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--fermentation-temp", nargs=2, type=float, default=(30.0, 34.0), metavar=("MIN", "MAX"))
+    parser.add_argument("--fermentation-duration", nargs=2, type=float, default=(120.0, 180.0), metavar=("MIN", "MAX"))
+    parser.add_argument("--baking-temp", nargs=2, type=float, default=(200.0, 218.0), metavar=("MIN", "MAX"))
+    parser.add_argument("--baking-duration", nargs=2, type=float, default=(30.0, 42.0), metavar=("MIN", "MAX"))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -695,6 +970,31 @@ def build_parser() -> argparse.ArgumentParser:
     rank_pane.add_argument("--save-run", action="store_true", help="Persist this run and its top candidates.")
     rank_pane.add_argument("--notes", help="Optional notes stored with --save-run.")
     rank_pane.set_defaults(func=_rank_pane_command)
+
+    rank_application = subparsers.add_parser(
+        "rank-application",
+        help="Rank application-specific blend candidates using process, blend, flavor, and confidence engines.",
+    )
+    rank_application.add_argument("--application", default="Pane", help="Application name, for example Pane or Pasta fresca.")
+    rank_application.add_argument("--preset", choices=sorted(PRESETS), default="bobs-inspired")
+    rank_application.add_argument(
+        "--ingredient",
+        action="append",
+        default=[],
+        help="Custom ingredient bound as 'Ingredient name:min:max'. Repeat to override --preset.",
+    )
+    rank_application.add_argument("--blend-samples", type=int, default=100)
+    rank_application.add_argument("--process-samples", type=int, default=20)
+    rank_application.add_argument("--top", type=int, default=10)
+    rank_application.add_argument("--seed", type=int, default=None)
+    rank_application.add_argument("--w-process", type=float, default=0.55)
+    rank_application.add_argument("--w-blend", type=float, default=0.25)
+    rank_application.add_argument("--w-flavor", type=float, default=0.20)
+    _add_process_bound_args(rank_application)
+    rank_application.add_argument("--json", help="Optional JSON output path.")
+    rank_application.add_argument("--save-run", action="store_true", help="Persist this run and its top candidates.")
+    rank_application.add_argument("--notes", help="Optional notes stored with --save-run.")
+    rank_application.set_defaults(func=_rank_application_command)
 
     runs = subparsers.add_parser("runs", help="Inspect saved simulation runs.")
     runs_subparsers = runs.add_subparsers(dest="runs_command", required=True)

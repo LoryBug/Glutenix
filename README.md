@@ -152,10 +152,30 @@ uv run glutenix rank-pane --preset sorghum-baseline --blend-samples 100 --proces
 
 Available presets include `sorghum-baseline`, `bobs-inspired`, `schaer-inspired`, `freee-inspired`, and `quinoa-hpmc`. Add `--csv results.csv` or `--json results.json` for machine-readable output.
 
+To run the broader application-aware optimizer from the CLI, use `rank-application`. This uses the same process, blend-property, flavor, and confidence scoring path as `POST /optimize/application-suggest`:
+
+```bash
+uv run glutenix rank-application --application Pane --preset bobs-inspired --blend-samples 300 --process-samples 40 --top 10 --seed 42
+```
+
+You can tune score weights or provide custom ingredient bounds:
+
+```bash
+uv run glutenix rank-application --application Pane \
+  --ingredient "Sorghum flour:0.25:0.45" \
+  --ingredient "Potato starch:0.15:0.35" \
+  --ingredient "Tapioca starch:0.10:0.25" \
+  --ingredient "Pea protein powder:0.03:0.08" \
+  --ingredient "Xanthan gum:0.005:0.015" \
+  --ingredient "Guar gum:0.005:0.015" \
+  --w-process 0.50 --w-blend 0.30 --w-flavor 0.20
+```
+
 To preserve a scientific history of runs and candidate decisions in the database:
 
 ```bash
 uv run glutenix rank-pane --preset bobs-inspired --blend-samples 300 --process-samples 40 --top 10 --seed 42 --save-run --notes "commercial-inspired baseline"
+uv run glutenix rank-application --application Pane --preset bobs-inspired --blend-samples 300 --process-samples 40 --top 10 --seed 42 --save-run --notes "application-aware optimizer run"
 uv run glutenix runs list
 uv run glutenix runs show 1
 uv run glutenix candidates mark 1 --status test_next --notes "best protein/viscosity balance"
@@ -249,6 +269,12 @@ Main endpoints:
 | `GET /calibration/bread-baking` | Compare bread simulator against literature records |
 | `GET /calibration/coverage` | Report literature-derived coverage ranges and OOD basis |
 | `POST /experiments` | Store experimental observations |
+| `GET /simulation-runs` | List saved simulation/optimization campaigns |
+| `GET /simulation-runs/{id}` | Show a saved run with parsed candidates |
+| `PATCH /simulation-candidates/{id}` | Update candidate decision status and notes |
+| `POST /simulation-candidates/{id}/promote-blend` | Convert a simulated candidate into a physical-test blend |
+| `POST /experiments/from-candidate` | Store measured results linked back to a candidate/run |
+| `POST /compare/blends` | Compare candidate, saved blend, and custom formulas with process/blend/flavor scoring |
 
 Example pasta cooking request:
 

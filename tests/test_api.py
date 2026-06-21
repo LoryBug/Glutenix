@@ -1,4 +1,5 @@
 from collections.abc import Generator
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +10,7 @@ from glutenix.api.deps import get_db
 from glutenix.api.server import app
 from glutenix.calibration.literature import DEFAULT_BREAD_DATASET, load_literature_records
 from glutenix.db.base import Base
+from glutenix.db.models import Application, SimulationCandidate, SimulationRun
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 
 client = TestClient(app)
@@ -52,6 +54,72 @@ def _setup_db():
     session.close()
     conn.close()
     app.dependency_overrides.clear()
+
+
+def _test_session() -> Session:
+    return next(app.dependency_overrides[get_db]())
+
+
+def _create_test_candidate() -> SimulationCandidate:
+    session = _test_session()
+    pane = session.query(Application).filter(Application.name == "Pane").first()
+    run = SimulationRun(
+        application_id=pane.id,
+        application_name="Pane",
+        source="test",
+        preset="test-preset",
+        seed=123,
+        blend_samples=10,
+        process_samples=5,
+        top_n=1,
+        process_bounds=json.dumps({"baking_temp_c": {"min": 200, "max": 220}}),
+        parameters=json.dumps({"test": True}),
+        git_commit="testcommit",
+        notes="test run",
+    )
+    session.add(run)
+    session.flush()
+    candidate = SimulationCandidate(
+        run_id=run.id,
+        rank=1,
+        score=0.75,
+        process_score=0.64,
+        blend_score=0.82,
+        flavor_score=0.91,
+        proportions=json.dumps({
+            "White rice flour": 0.5499,
+            "Tapioca starch": 0.25,
+            "Potato starch": 0.18,
+            "Xanthan gum": 0.02,
+        }),
+        process=json.dumps({
+            "fermentation_temp_c": 30,
+            "fermentation_duration_min": 120,
+            "baking_temp_c": 210,
+            "baking_duration_min": 35,
+        }),
+        properties=json.dumps({
+            "protein_pct": 4.2,
+            "starch_pct": 80,
+            "fat_pct": 0.9,
+            "fiber_pct": 3.1,
+            "water_absorption": 1.4,
+            "viscosity_index": 1.8,
+            "hydrocolloid_pct": 0.02,
+            "amylose_pct": 20,
+        }),
+        metrics=json.dumps({
+            "specific_volume_cm3_g": 2.2,
+            "crumb_hardness_n": 12.0,
+            "porosity_pct": 38.0,
+        }),
+        confidence=json.dumps({"score": 0.7, "level": "medium", "basis": [], "risk_flags": []}),
+        risk_flags=json.dumps([]),
+    )
+    session.add(candidate)
+    session.commit()
+    session.refresh(candidate)
+    return candidate
 
 
 class TestHealth:
@@ -512,3 +580,90 @@ class TestExperiments:
             "metrics": "{}",
         })
         assert resp.status_code == 422
+
+
+class TestInternalWorkflow:
+    def test_simulation_run_list_show_and_candidate_patch(self):
+        candidate = _create_test_candidate()
+
+        resp = client.get("/simulation-runs")
+        assert resp.status_code == 200
+        assert resp.json()[0]["id"] == candidate.run_id
+        assert resp.json()[0]["candidate_count"] == 1
+
+        resp = client.get(f"/simulation-runs/{candidate.run_id}")
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["parameters"] == {"test": True}
+        assert payload["candidates"][0]["proportions"]["White rice flour"] == 0.5499
+
+        resp = client.patch(
+            f"/simulation-candidates/{candidate.id}",
+            json={"status": "test_next", "notes": "ready for physical test"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "test_next"
+        assert resp.json()["decision_notes"] == "ready for physical test"
+
+    def test_promote_candidate_to_blend(self):
+        candidate = _create_test_candidate()
+
+        resp = client.post(
+            f"/simulation-candidates/{candidate.id}/promote-blend",
+            json={"name": "API promoted blend"},
+        )
+
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        assert payload["candidate_id"] == candidate.id
+        assert payload["created"] is True
+
+        resp = client.get(f"/blends/{payload['blend_id']}")
+        assert resp.status_code == 200
+        assert len(resp.json()["ingredients"]) == 4
+
+    def test_create_experiment_from_candidate(self):
+        candidate = _create_test_candidate()
+
+        resp = client.post("/experiments/from-candidate", json={
+            "candidate_id": candidate.id,
+            "conditions": {"dry_blend_g": 500, "water_added_g": 700},
+            "metrics": {"specific_volume_cm3_g": 2.35, "flavor_score": 4},
+        })
+
+        assert resp.status_code == 201, resp.text
+        payload = resp.json()
+        assert payload["candidate_id"] == candidate.id
+        assert payload["conditions"]["simulation_run_id"] == candidate.run_id
+        assert payload["metrics"]["specific_volume_cm3_g"] == 2.35
+
+    def test_compare_blends_accepts_candidates_blends_and_custom_formula(self):
+        candidate = _create_test_candidate()
+        promoted = client.post(f"/simulation-candidates/{candidate.id}/promote-blend", json={}).json()
+
+        resp = client.post("/compare/blends", json={
+            "application": "Pane",
+            "items": [
+                {"candidate_id": candidate.id},
+                {"blend_id": promoted["blend_id"]},
+                {
+                    "name": "custom formula",
+                    "proportions": {
+                        "White rice flour": 0.5,
+                        "Tapioca starch": 0.28,
+                        "Potato starch": 0.2,
+                        "Xanthan gum": 0.02,
+                    },
+                },
+            ],
+            "n_process_samples": 5,
+            "seed": 77,
+        })
+
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        assert payload["application"] == "Pane"
+        assert len(payload["ranking"]) == 3
+        assert payload["ranking"][0]["rank"] == 1
+        assert payload["ranking"][0]["bread_metrics"]["specific_volume_cm3_g"] > 0
+        assert "flavor_score" in payload["ranking"][0]

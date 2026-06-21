@@ -11,6 +11,7 @@ from glutenix.api.routers import (
     calibration,
     experiments,
     ingredients,
+    internal,
     optimization,
     prediction,
     simulation,
@@ -48,6 +49,7 @@ app.include_router(prediction.router)
 app.include_router(optimization.router)
 app.include_router(experiments.router)
 app.include_router(calibration.router)
+app.include_router(internal.router)
 
 
 @app.get("/health")
