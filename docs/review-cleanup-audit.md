@@ -1,5 +1,7 @@
 # Audit review-cleanup
 
+Public working note: this is a historical cleanup audit. Active follow-up work should be tracked in GitHub issues rather than edited here as private scratch notes.
+
 Data audit: 2026-06-14
 
 Branch: `review-cleanup`

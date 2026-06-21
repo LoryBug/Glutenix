@@ -26,3 +26,6 @@ Thumbs.db
 *.sqlite3
 *.sqlite3-*
 tmp/
+
+# Local private notes and unpublished material
+private/

@@ -2,7 +2,7 @@
 
 Glutenix is a simulation and optimization project for gluten-free flour blends.
 
-The idea started from two places: the guided experimentation mindset behind Alchemix, and a practical personal need. As someone with celiac disease, I wanted a better way to reason about gluten-free foods before spending time, ingredients, and money on repeated trial-and-error batches.
+The project is built around evidence-aware experimentation: reason about candidate formulations before spending time, ingredients, and money on repeated trial-and-error batches.
 
 Gluten-free formulation is difficult because small changes in flour, starch, hydrocolloid, hydration, heat, and process can completely change the result. Glutenix tries to make experimentation more intentional: simulate first, compare options, identify plausible candidates, and then test only the recipes that actually make sense.
 
@@ -490,6 +490,8 @@ Recent full validation should be checked with `uv run pytest -q`; avoid relying 
 ## Development Workflow
 
 Planning, issue templates, branch/PR conventions, review expectations, and ADR guidance are documented in `docs/development-workflow.md`.
+
+Documentation classification, generated-doc boundaries, and private-note policy are documented in `docs/classification.md`.
 
 ## Project Philosophy
 

@@ -1,5 +1,7 @@
 # Application Target Profiles Research
 
+Public working note: this file is not authoritative product documentation. Stable target ranges and citations should be migrated into generated or reviewed docs as #79 and #80 progress.
+
 Scopo: definire range e vincoli realistici per generare i top N blend piu adatti a un utilizzo specifico: pizza, pane, biscotti, crostata/frolla, pasta fresca e lievitati dolci.
 
 Questo documento non e ancora una fonte normativa. E una traccia di lavoro per raccogliere letteratura, trasformarla in target numerici e poi implementare un `Application Target Optimizer` in Glutenix.
