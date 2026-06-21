@@ -32,7 +32,7 @@ def _seeded_session():
 class TestLiteratureCalibration:
     def test_load_literature_records(self):
         records = load_literature_records()
-        assert len(records) == 40
+        assert len(records) == 42
         assert records[0].measured["cooking_loss_pct"] > 0
         assert "water_absorption_pct" in records[0].measured
         assert abs(sum(records[0].mapped_formula.values()) - 1.0) < 1e-6
@@ -40,9 +40,9 @@ class TestLiteratureCalibration:
     def test_validate_literature_dataset_summary(self):
         summary = validate_literature_dataset()
 
-        assert summary["record_count"] == 40
+        assert summary["record_count"] == 42
         assert summary["applications"] == ["Pasta fresca"]
-        assert summary["source_count"] == 3
+        assert summary["source_count"] == 5
         assert "cooking_loss_pct" in summary["metrics"]
         assert "swelling_index" in summary["metrics"]
 
@@ -88,8 +88,8 @@ class TestLiteratureCalibration:
         finally:
             session.close()
 
-        assert result["n_records"] == 40
-        assert result["source_count"] == 3
+        assert result["n_records"] == 42
+        assert result["source_count"] == 5
         assert result["metric"] == "cooking_loss_pct"
         assert result["before"]["rmse"] >= 0
         assert result["after"]["rmse"] >= 0
@@ -102,13 +102,16 @@ class TestLiteratureCalibration:
         assert result["record_groups"]["process_family"] == {
             "dried_extruded": 10,
             "fresh_calcium_gel": 30,
+            "instant_extruded": 2,
         }
         assert result["record_groups"]["source"] == {
             "10.1002/fsn3.3301": 30,
             "10.1007/s13197-016-2323-8": 5,
             "10.1016/j.fochx.2025.103403": 5,
+            "10.3390/foods8100496": 1,
+            "10.3390/pr9040693": 1,
         }
-        assert len(result["rows"]) == 40
+        assert len(result["rows"]) == 42
         assert "alpha" in result["correction"]
         assert result["rows"][0]["water_to_flour_ratio"] == 2.0
         assert result["rows"][0]["process_family"] == "fresh_calcium_gel"

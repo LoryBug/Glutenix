@@ -293,8 +293,8 @@ Glutenix stores structured literature records in `data/literature/` and compares
 
 Current pasta cooking calibration dataset:
 
-- 40 records.
-- 3 peer-reviewed sources.
+- 42 records.
+- 5 peer-reviewed sources.
 - Main calibration metric: `cooking_loss_pct`.
 - Auxiliary metrics: water absorption, swelling index, and water adsorption index where available.
 
@@ -303,6 +303,8 @@ Current sources include:
 - Lux et al. 2023: calcium-alginate amaranth fresh pasta.
 - Liu et al. 2026: extruded rice pasta with konjac glucomannan and curdlan.
 - Detchewa et al. 2016: extruded rice spaghetti with soy protein isolate.
+- Bouasla & Wojtowicz 2019: instant extrusion-cooked rice-buckwheat pasta.
+- Bouasla & Wojtowicz 2021: instant extrusion-cooked rice pasta.
 
 Current bread baking diagnostic dataset:
 

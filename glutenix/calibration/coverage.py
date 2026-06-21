@@ -102,7 +102,7 @@ def build_domain_coverage(db: Session, domain: str) -> LiteratureCoverageSummary
         application = "Pasta fresca"
         family_fn = _process_family
         limitations = [
-            "Pasta coverage is strongest for calcium-alginate fresh pasta and dried extruded rice pasta.",
+            "Pasta coverage is strongest for calcium-alginate fresh pasta, dried extruded rice pasta, and instant extrusion-cooked rice/rice-buckwheat pasta.",
             "Generic fresh pasta, egg pasta, and legume pasta remain extrapolative unless matched by future records.",
         ]
     elif domain == "bread_baking":

@@ -18,6 +18,9 @@ class PastaCookingParams:
     dough_heat_time_min: float = 0.0
     dried_pasta: bool = False
     extrusion_moisture_pct: float | None = None
+    extrusion_barrel_temp_c: float | None = None
+    screw_speed_rpm: float | None = None
+    instant_pasta: bool = False
 
 
 @dataclass
@@ -70,6 +73,10 @@ class PastaCookingSimulator:
             raise ValueError("dough_heat_time_min must be non-negative")
         if p.extrusion_moisture_pct is not None and p.extrusion_moisture_pct <= 0:
             raise ValueError("extrusion_moisture_pct must be positive")
+        if p.extrusion_barrel_temp_c is not None and p.extrusion_barrel_temp_c <= 0:
+            raise ValueError("extrusion_barrel_temp_c must be positive")
+        if p.screw_speed_rpm is not None and p.screw_speed_rpm <= 0:
+            raise ValueError("screw_speed_rpm must be positive")
 
         temp_factor = float(np.clip((p.water_temp_c - 60.0) / 38.0, 0.05, 1.25))
         thickness_factor = max(p.pasta_thickness_mm / 2.0, 0.25)
@@ -88,6 +95,8 @@ class PastaCookingSimulator:
         soy_protein = self._ingredient_fraction(blend_props, "soy protein")
         waxy_rice = self._ingredient_fraction(blend_props, "sweet rice") + self._ingredient_fraction(blend_props, "waxy")
         high_amylose_rice = self._ingredient_fraction(blend_props, "high-amylose rice")
+        white_rice = self._ingredient_fraction(blend_props, "white rice")
+        buckwheat = self._ingredient_fraction(blend_props, "buckwheat")
         protein = blend_props.protein_pct
         amylose = blend_props.amylose_pct
         water_absorption = blend_props.water_absorption
@@ -195,14 +204,33 @@ class PastaCookingSimulator:
                 20.0,
                 260.0,
             ))
+            if p.instant_pasta:
+                extrusion_moisture = p.extrusion_moisture_pct or 30.0
+                barrel_temp = p.extrusion_barrel_temp_c or 100.0
+                screw_speed = p.screw_speed_rpm or 80.0
+                water_uptake = float(np.clip(
+                    210.0
+                    + 35.0 * buckwheat
+                    + 0.8 * (extrusion_moisture - 30.0)
+                    + 0.35 * (barrel_temp - 100.0)
+                    - 0.08 * (screw_speed - 80.0),
+                    140.0,
+                    260.0,
+                ))
 
         process_family = "dried_extruded" if p.dried_pasta else "generic_fresh"
         calibration_score = 0.25
         notes: list[str] = []
         if p.dried_pasta:
+            if p.instant_pasta:
+                process_family = "instant_extruded"
             rice_like = high_amylose_rice + waxy_rice >= 0.75
+            instant_rice_like = p.instant_pasta and white_rice + buckwheat >= 0.75
             studied_additive = kgm > 0.0 or curdlan > 0.0 or soy_protein > 0.0 or waxy_rice > 0.0
-            if rice_like and studied_additive and p.extrusion_moisture_pct is not None:
+            if instant_rice_like and p.extrusion_moisture_pct is not None:
+                calibration_score = 0.65
+                notes.append("Covered by instant extrusion-cooked rice or rice-buckwheat pasta literature.")
+            elif rice_like and studied_additive and p.extrusion_moisture_pct is not None:
                 calibration_score = 0.75
                 notes.append("Covered by dried-extruded rice pasta literature with KGM/curdlan or SPI.")
             elif rice_like:
@@ -275,6 +303,17 @@ class PastaCookingSimulator:
                 + 0.35 * max(0.0, overcook)
                 + 0.6 * (1.0 - min(amylose / 28.0, 1.0))
             )
+            if p.instant_pasta:
+                extrusion_moisture = p.extrusion_moisture_pct or 30.0
+                barrel_temp = p.extrusion_barrel_temp_c or 100.0
+                screw_speed = p.screw_speed_rpm or 80.0
+                loss = (
+                    4.7
+                    + 0.9 * buckwheat
+                    + 0.25 * (extrusion_moisture - 30.0)
+                    - 0.007 * (barrel_temp - 100.0)
+                    + 0.005 * (screw_speed - 80.0)
+                )
         cooking_loss = float(np.clip(loss, 0.35, 30.0))
 
         if water_to_flour is None:

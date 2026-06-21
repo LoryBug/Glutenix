@@ -19,8 +19,8 @@ The evidence map is intentionally conservative. A model can be useful before it 
 
 | Domain | Current Evidence | Records | Sources | Main Metrics | Current Confidence | Next Priority |
 |---|---:|---:|---:|---|---|---|
-| Pasta cooking | `calibrated` | 40 | 3 | Cooking loss, water uptake, swelling | Medium-high | Add more dried/fresh pasta systems and texture data |
-| Bread baking | `literature-informed` | 60 | 9 | Specific volume, crumb hardness, porosity | Medium-low | Add more hydrocolloid/protein/fiber bread records |
+| Pasta cooking | `calibrated` | 42 | 5 | Cooking loss, water uptake, swelling | Medium-high | Add more dried/fresh pasta systems and texture data |
+| Bread baking | `literature-informed` | 65 | 10 | Specific volume, crumb hardness, porosity | Medium-low | Add more hydrocolloid/protein/fiber bread records |
 | Pizza baking | `heuristic` | 0 | 0 | Process fit, crust/core targets, blend targets | Low | Add pizza or flatbread dataset after bread |
 | Sweet leavened doughs | `heuristic` | 0 | 0 | Volume/process/blend targets | Low | Extract enriched dough literature later |
 | Shortcrust/frolla | `heuristic` | 0 | 0 | Low-volume process fit, fat/starch balance | Low | Add biscuit/shortcrust texture papers later |
@@ -35,8 +35,8 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | `BlendCalculator` | `literature-informed` | Ingredient composition and approximate functional properties | Ingredient provenance and variance ranges are not fully tracked |
 | `FermentationSimulator` | `heuristic` | Mechanistic proxy for gas/volume behavior | No direct validation against gluten-free dough fermentation data |
 | `BakingSimulator` | `literature-informed` | Heat-transfer and gelatinization-inspired proxy plus first bread comparison dataset | Needs broader bread/pizza baking validation |
-| `BreadQualitySimulator` | `literature-informed` | 60 bread records from 9 papers, covering specific volume, crumb hardness, and porosity | Early diagnostic model; hardness and porosity need more sources |
-| `PastaCookingSimulator` | `calibrated` | 40 records from 3 pasta papers | Limited texture validation and only 3 sources |
+| `BreadQualitySimulator` | `literature-informed` | 65 bread records from 10 papers, covering specific volume, crumb hardness, and porosity | Early diagnostic model; hardness and porosity need more sources |
+| `PastaCookingSimulator` | `calibrated` | 42 records from 5 pasta papers | Limited texture validation and source balance |
 | `FlavorModel` | `heuristic` | Literature-informed sensory proxy | No measured sensory panel calibration |
 | `ApplicationSuggest` | `heuristic + confidence` | Target profiles, process scores, flavor score, pasta calibration where available | Needs domain calibration beyond pasta |
 | `ModelConfidence` | `initial + OOD` | Blend target range fit, score bands, pasta calibration score, literature-derived coverage ranges plus bread mechanism/calibration reliability | Needs richer coverage distances and source-specific uncertainty |
@@ -49,21 +49,25 @@ Current status: `calibrated` for selected pasta cooking metrics.
 
 Structured records:
 
-- 40 total records.
-- 3 peer-reviewed sources.
+- 42 total records.
+- 5 peer-reviewed sources.
 - 30 fresh calcium-alginate amaranth pasta records.
 - 10 dried extruded rice pasta records.
+- 2 instant extrusion-cooked rice/rice-buckwheat pasta records.
 
 Current sources:
 
 - Lux et al. 2023, DOI `10.1002/fsn3.3301`, calcium-alginate amaranth pasta.
 - Liu et al. 2026, DOI `10.1016/j.fochx.2025.103403`, extruded rice pasta with KGM and curdlan.
 - Detchewa et al. 2016, DOI `10.1007/s13197-016-2323-8`, extruded rice spaghetti with soy protein isolate.
+- Bouasla & Wojtowicz 2019, DOI `10.3390/foods8100496`, instant extrusion-cooked rice-buckwheat pasta.
+- Bouasla & Wojtowicz 2021, DOI `10.3390/pr9040693`, instant extrusion-cooked rice pasta.
 
 Covered process families:
 
 - `fresh_calcium_gel`
 - `dried_extruded`
+- `instant_extruded`
 - `generic_fresh` only as low-confidence heuristic mode
 
 Covered ingredients and mechanisms:
@@ -72,7 +76,9 @@ Covered ingredients and mechanisms:
 - Sodium alginate.
 - Calcium lactate bath.
 - High-amylose rice flour.
+- White rice flour.
 - Sweet/waxy rice flour.
+- Buckwheat flour.
 - Konjac glucomannan.
 - Curdlan.
 - Soy protein isolate.
@@ -94,7 +100,7 @@ Known gaps:
 
 - Fresh egg pasta systems.
 - Corn/rice commercial pasta systems without alginate.
-- Chickpea, lentil, pea, quinoa, buckwheat pasta systems.
+- Chickpea, lentil, pea, and quinoa pasta systems.
 - Texture metrics such as firmness, hardness, adhesiveness, chewiness, and tensile strength.
 - Sensory scores.
 - Independent train/test calibration split.
@@ -319,12 +325,12 @@ Recommended next action:
 
 | Ingredient Family | Pasta | Bread | Pizza | Notes |
 |---|---|---|---|---|
-| Rice flour/starch | Medium | Heuristic | Heuristic | Pasta has high-amylose and waxy rice records |
+| Rice flour/starch | Medium | Heuristic | Heuristic | Pasta has high-amylose, waxy, and white rice records |
 | Corn starch/flour | Low | Structured in bread | Heuristic | Needs more bread/pizza literature records |
 | Tapioca starch | Low | Structured in bread | Heuristic | Covered in one hydrocolloid bread source |
 | Potato starch | Low | Heuristic | Heuristic | Seeded but not validated by literature datasets |
 | Amaranth flour | Medium | Heuristic | Heuristic | Covered in calcium-alginate pasta only |
-| Buckwheat/quinoa/teff/millet | Low | Limited structured | Heuristic | Millet and quinoa appear in bread records, but cultivar/source coverage is limited |
+| Buckwheat/quinoa/teff/millet | Low-medium | Limited structured | Heuristic | Buckwheat appears in one pasta record; millet and quinoa appear in bread records, but cultivar/source coverage is limited |
 | HPMC | Low | Limited structured | Heuristic | Covered in one hydrocolloid bread source |
 | Xanthan/guar | Low | Limited structured | Heuristic | Covered in one hydrocolloid bread source plus xanthan proxy records |
 | Psyllium | Low | Heuristic | Heuristic | High priority for bread/pizza literature |
@@ -338,6 +344,7 @@ Recommended next action:
 |---|---|---|
 | Fresh calcium-gel pasta | Medium-high | 30 records from Lux 2023 |
 | Dried extruded rice pasta | Medium | 10 records from Liu 2026 and Detchewa 2016 |
+| Instant extrusion-cooked rice pasta | Medium-low | 2 records from Bouasla & Wojtowicz 2019/2021 |
 | Generic fresh pasta | Low | Heuristic fallback only |
 | Yeast-fermented bread | Medium-low | 65 records from 10 sources, specific volume and crumb hardness from hydrocolloid and protein-enriched families |
 | High-temperature pizza baking | Low | Simulated but not literature-calibrated |

@@ -139,8 +139,11 @@ PASTA_PROCESS_FEATURES = [
     "dough_heat_temp_c",
     "dough_heat_time_min",
     "dried_pasta",
+    "instant_pasta",
     "water_to_flour_ratio",
     "extrusion_moisture_pct",
+    "extrusion_barrel_temp_c",
+    "screw_speed_rpm",
 ]
 
 
@@ -178,12 +181,20 @@ def _extract_pasta_process(record: LiteratureRecord) -> list[float]:
         float(p.get("dough_heat_temp_c", 0.0)),
         float(p.get("dough_heat_time_min", 0.0)),
         float(p.get("dried_pasta", False)),
+        float(p.get("instant_pasta", False)),
         water_to_flour,
     ]
     if p.get("extrusion_moisture_pct") is not None:
         features.append(float(p["extrusion_moisture_pct"]))
     else:
         features.append(32.0)
+    if p.get("extrusion_barrel_temp_c") is not None:
+        features.append(float(p["extrusion_barrel_temp_c"]))
+    elif p.get("extrusion_zone_temps_c"):
+        features.append(max(float(value) for value in p["extrusion_zone_temps_c"]))
+    else:
+        features.append(100.0)
+    features.append(float(p.get("screw_speed_rpm", 80.0)))
     return features
 
 
