@@ -13,6 +13,7 @@ from glutenix.cli import (
     save_application_run,
     save_pane_run,
 )
+from glutenix.db.models import Blend, ExperimentResult
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 
 
@@ -493,3 +494,77 @@ def test_cli_coverage_gaps_writes_candidate_json(db_session, monkeypatch, tmp_pa
     assert "specific_volume_cm3_g" in payload["expected_metrics"]
     assert payload["candidate"]["candidate_id"] == candidate_id
     assert payload["candidate"]["assessment"]["level"] in {"low", "medium", "high"}
+
+
+def test_cli_feedback_summary_writes_json(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=18,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=18,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate = run.candidates[0]
+    blend = Blend(name="feedback test blend", application_id=run.application_id)
+    db_session.add(blend)
+    db_session.flush()
+    db_session.add(ExperimentResult(
+        blend_id=blend.id,
+        application_id=run.application_id,
+        conditions=json.dumps({"candidate_id": candidate.id, "dry_blend_g": 500}),
+        metrics=json.dumps({
+            "specific_volume_cm3_g": 2.5,
+            "crumb_hardness_n": 10.0,
+            "unmatched_numeric": 42,
+            "notes": "good handling",
+        }),
+    ))
+    db_session.commit()
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "feedback-summary.json"
+
+    exit_code = main([
+        "feedback",
+        "summary",
+        "--application",
+        "Pane",
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "compared"
+    assert payload["linked_experiment_count"] == 1
+    assert payload["comparison_count"] == 2
+    metrics = {row["metric"]: row for row in payload["metrics"]}
+    assert "specific_volume_cm3_g" in metrics
+    assert metrics["specific_volume_cm3_g"]["count"] == 1
+    assert payload["candidates"][0]["candidate_id"] == candidate.id
+    assert payload["unmatched_measurements"] == {"unmatched_numeric": 1}
+
+
+def test_cli_feedback_summary_handles_empty_data(db_session, monkeypatch, tmp_path):
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "feedback-empty.json"
+
+    exit_code = main(["feedback", "summary", "--application", "Pane", "--json", str(output_path)])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "no_experiments"
+    assert payload["metrics"] == []
