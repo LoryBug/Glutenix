@@ -181,6 +181,14 @@ uv run glutenix runs show 1
 uv run glutenix candidates mark 1 --status test_next --notes "best protein/viscosity balance"
 ```
 
+To generate a pre-lab dossier for a saved candidate:
+
+```bash
+uv run glutenix candidates report 61 --markdown tmp/candidate-61-report.md
+```
+
+The dossier consolidates formula percentages, saved run context, predicted metrics, confidence/evidence notes, risk flags, flavor interpretation, and a physical-test recommendation. It is a decision artifact, not experimental validation.
+
 To summarize saved candidates and extract robust formulation ranges:
 
 ```bash
