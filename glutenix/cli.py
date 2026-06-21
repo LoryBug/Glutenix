@@ -36,6 +36,7 @@ from glutenix.api.routers.internal import (
 )
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.analysis.coverage_gaps import coverage_gaps_report
+from glutenix.analysis.feedback import experimental_feedback_summary
 from glutenix.analysis.flavor import explain_flavor
 from glutenix.analysis.report import candidate_dossier_markdown, candidate_protocol_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
@@ -1034,6 +1035,21 @@ def _coverage_gaps_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _feedback_summary_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        result = experimental_feedback_summary(session, application=args.application)
+        _print_feedback_summary(result)
+        if args.json:
+            path = Path(args.json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"JSON written to {args.json}")
+    finally:
+        session.close()
+    return 0
+
+
 def _cohort_analyze_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1259,6 +1275,38 @@ def _print_coverage_gaps(result: dict[str, Any]) -> None:
             print(f"- {item}")
 
 
+def _print_feedback_summary(result: dict[str, Any]) -> None:
+    print(
+        f"application={result['application'] or 'all'} status={result['status']} "
+        f"candidates={result['candidate_count']} linked_candidates={result['linked_candidate_count']} "
+        f"experiments={result['linked_experiment_count']} comparisons={result['comparison_count']}"
+    )
+    print(result["message"])
+    print("\nMetric error summary")
+    print("metric count mean_pred mean_meas mean_error mae rmse mape_pct")
+    for row in result["metrics"]:
+        mape = "-" if row["mape_pct"] is None else f"{row['mape_pct']:.2f}"
+        print(
+            f"{row['metric']:<28} {row['count']:<5} {row['mean_predicted']:<9.4f} "
+            f"{row['mean_measured']:<9.4f} {row['mean_error']:<10.4f} "
+            f"{row['mae']:<8.4f} {row['rmse']:<8.4f} {mape}"
+        )
+    if result["candidates"]:
+        print("\nCandidate feedback rows")
+        print("candidate_id run_id status score experiments comparisons mean_abs_pct_delta")
+        for row in result["candidates"]:
+            pct = "-" if row["mean_abs_percent_delta"] is None else f"{row['mean_abs_percent_delta']:.2f}"
+            print(
+                f"{row['candidate_id']:<12} {row['run_id']:<6} {row['status']:<9} "
+                f"{row['score']:<6.4f} {row['experiment_count']:<11} {row['comparison_count']:<11} {pct}"
+            )
+    if result["unmatched_measurements"]:
+        print("\nUnmatched measured numeric fields")
+        for metric, count in result["unmatched_measurements"].items():
+            print(f"- {metric}: {count}")
+    print(f"\n{result['evidence_note']}")
+
+
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
     if "specific_volume_cm3_g" in metrics:
         return f"vol={metrics['specific_volume_cm3_g']:.3f} hard={metrics['crumb_hardness_n']:.2f}"
@@ -1360,6 +1408,13 @@ def build_parser() -> argparse.ArgumentParser:
     coverage_gaps.add_argument("--candidate-id", type=int, help="Optional saved candidate id to assess.")
     coverage_gaps.add_argument("--json", help="Optional JSON output path.")
     coverage_gaps.set_defaults(func=_coverage_gaps_command)
+
+    feedback = subparsers.add_parser("feedback", help="Summarize experimental feedback against predictions.")
+    feedback_subparsers = feedback.add_subparsers(dest="feedback_command", required=True)
+    feedback_summary = feedback_subparsers.add_parser("summary", help="Aggregate prediction error across linked experiments.")
+    feedback_summary.add_argument("--application", help="Filter by application name, for example Pane.")
+    feedback_summary.add_argument("--json", help="Optional JSON output path.")
+    feedback_summary.set_defaults(func=_feedback_summary_command)
 
     cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
     cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)
