@@ -117,6 +117,7 @@ def build_domain_coverage(db: Session, domain: str) -> LiteratureCoverageSummary
             "Bread coverage is strongest for specific volume and limited for porosity.",
             "Crumb hardness coverage is broader but unreliable for enzyme-treated quinoa/HPMC systems.",
             "Microbial transglutaminase is tracked as a mechanism-OOD process field but is not modeled yet.",
+            "Protein source and processing-state effects are name-inferred and remain sparsely calibrated.",
         ]
     else:
         raise ValueError(f"Unknown literature coverage domain: {domain}")

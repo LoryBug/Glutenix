@@ -50,6 +50,25 @@ STARCH_VOLUME_MODIFIERS: dict[str, float] = {
 }
 
 
+# Sparse diagnostic factors grounded in Loncaric 2026, Wojcik 2021,
+# Kahraman 2022, and Bianchi 2026 protein-enriched bread records.
+PROTEIN_SOURCE_EFFECTS: dict[str, dict[str, float]] = {
+    "legume_flour": {"volume": -0.32, "hardness": 8.0, "porosity": -2.0, "staling": 0.28},
+    "dairy_concentrate": {"volume": 0.06, "hardness": -3.0, "porosity": -1.5, "staling": -0.04},
+    "protein_isolate": {"volume": -0.65, "hardness": 11.0, "porosity": -3.0, "staling": 0.15},
+    "seed_flour": {"volume": -0.06, "hardness": 1.5, "porosity": -0.8, "staling": 0.05},
+}
+
+PROTEIN_PROCESS_EFFECTS: dict[str, dict[str, float]] = {
+    "raw": {"volume": 0.0, "hardness": 0.0, "porosity": 0.0, "staling": 0.0},
+    "roasted": {"volume": 1.4, "hardness": -28.0, "porosity": 32.0, "staling": -0.35},
+    "dehulled": {"volume": 0.85, "hardness": 2.0, "porosity": 1.0, "staling": 0.03},
+    "fermented": {"volume": 0.5, "hardness": -4.0, "porosity": 5.0, "staling": -0.10},
+    "hydrolyzed": {"volume": 0.2, "hardness": -2.0, "porosity": 2.0, "staling": -0.05},
+    "isolated": {"volume": 0.0, "hardness": 0.0, "porosity": 0.0, "staling": 0.0},
+}
+
+
 class BreadQualitySimulator:
     def __init__(self, params: BreadQualityParams | None = None):
         self.params = params or BreadQualityParams()
@@ -62,6 +81,52 @@ class BreadQualitySimulator:
             for item in blend_props.ingredients_detail
             if token in item["name"].lower()
         )
+
+    @staticmethod
+    def _protein_source_category(name: str) -> str | None:
+        lowered = name.lower()
+        if "whey" in lowered or "caseinate" in lowered:
+            return "dairy_concentrate"
+        if "soy protein" in lowered or "pea protein" in lowered or "isolate" in lowered:
+            return "protein_isolate"
+        if any(token in lowered for token in ("chickpea", "lentil", "faba", "pea flour")):
+            return "legume_flour"
+        if "flaxseed" in lowered or "seed flour" in lowered:
+            return "seed_flour"
+        return None
+
+    @staticmethod
+    def _protein_processing_state(name: str) -> str:
+        lowered = name.lower()
+        if "roasted" in lowered:
+            return "roasted"
+        if "dehulled" in lowered:
+            return "dehulled"
+        if "fermented" in lowered:
+            return "fermented"
+        if "hydrolyzed" in lowered or "hydrolysed" in lowered:
+            return "hydrolyzed"
+        if "isolate" in lowered or "isolated" in lowered or "protein powder" in lowered:
+            return "isolated"
+        return "raw"
+
+    def _protein_structure_effects(self, blend_props: BlendProperties) -> tuple[dict[str, float], dict[str, float]]:
+        effects = {"volume": 0.0, "hardness": 0.0, "porosity": 0.0, "staling": 0.0}
+        category_fractions = {category: 0.0 for category in PROTEIN_SOURCE_EFFECTS}
+        for item in blend_props.ingredients_detail:
+            category = self._protein_source_category(str(item.get("name", "")))
+            if category is None:
+                continue
+            fraction = float(item.get("proportion", 0.0))
+            category_fractions[category] += fraction
+            state = self._protein_processing_state(str(item.get("name", "")))
+            state_effects = PROTEIN_PROCESS_EFFECTS.get(state, PROTEIN_PROCESS_EFFECTS["raw"])
+            for metric in effects:
+                effects[metric] += fraction * (
+                    PROTEIN_SOURCE_EFFECTS[category][metric]
+                    + state_effects[metric]
+                )
+        return effects, category_fractions
 
     def simulate(self, blend_props: BlendProperties) -> BreadQualityResult:
         p = self.params
@@ -97,13 +162,17 @@ class BreadQualitySimulator:
             gelatinization_temp_max=blend_props.gelatinization_temp_max,
         )
 
-        chickpea = self._ingredient_fraction(blend_props, "chickpea")
         millet = self._ingredient_fraction(blend_props, "millet")
         commercial_mix = self._ingredient_fraction(blend_props, "commercial gluten-free bread mix")
-        whey = self._ingredient_fraction(blend_props, "whey")
         hpmc = self._ingredient_fraction(blend_props, "hpmc")
         guar = self._ingredient_fraction(blend_props, "guar")
         xanthan = self._ingredient_fraction(blend_props, "xanthan")
+        protein_effects, protein_categories = self._protein_structure_effects(blend_props)
+        protein_enrichment_fraction = (
+            protein_categories["legume_flour"]
+            + protein_categories["dairy_concentrate"]
+            + protein_categories["protein_isolate"]
+        )
 
         structure = float(np.clip(
             0.32 * blend_props.viscosity_index / 2.4
@@ -119,7 +188,7 @@ class BreadQualitySimulator:
         leavening_boost = 0.28 * float(np.tanh(p.chemical_leavening_pct / 1.0))
         emulsifier_effect = -0.16 * float(np.tanh(p.emulsifier_pct / 0.3))
 
-        starch_mod = STARCH_VOLUME_MODIFIERS.get(blend_props.dominant_starch_type, 0.0)
+        starch_mod = STARCH_VOLUME_MODIFIERS.get(blend_props.dominant_starch_type or "", 0.0)
         if blend_props.starch_fraction > 0:
             starch_mod *= min(blend_props.starch_fraction, 1.0)
 
@@ -133,16 +202,15 @@ class BreadQualitySimulator:
             + leavening_boost
             + emulsifier_effect
             + starch_mod
-            - 0.28 * chickpea
             - 0.18 * millet
-            + 0.10 * whey
+            + protein_effects["volume"]
         )
         specific_volume = float(np.clip(specific_volume, 0.8, 5.0))
 
         storage_factor = 1.0 + 0.08 * max(p.storage_days - 1.0, 0.0)
         staling_drive = float(np.clip(
             0.34
-            + 0.28 * chickpea
+            + protein_effects["staling"]
             + 0.18 * millet
             + 0.16 * blend_props.starch_pct / 80.0
             - 0.18 * blend_props.hydrocolloid_pct / 0.05
@@ -157,9 +225,7 @@ class BreadQualitySimulator:
 
         is_hc_controlled_hardness = (
             blend_props.hydrocolloid_pct > 0.001
-            and chickpea <= 0.25
-            and whey <= 0.05
-            and self._ingredient_fraction(blend_props, "pea protein") <= 0.01
+            and protein_enrichment_fraction <= 0.05
         )
         if is_hc_controlled_hardness:
             hc_hardness_mod = (
@@ -172,9 +238,8 @@ class BreadQualitySimulator:
         hardness = (
             18.0 / max(specific_volume, 0.8) ** 1.35
             + 14.0 * staling_drive * storage_factor
-            + 8.0 * chickpea
             + 2.0 * millet
-            - 2.0 * whey
+            + protein_effects["hardness"]
             + hc_hardness_mod
         )
         hardness = float(np.clip(hardness, 1.0, 80.0))
@@ -184,7 +249,7 @@ class BreadQualitySimulator:
             + 5.0 * structure
             + 3.2 * hydration_fit
             + 2.5 * min(blend_props.hydrocolloid_pct / 0.025, 1.2)
-            - 2.0 * chickpea
+            + protein_effects["porosity"]
             - 1.0 * millet,
             8.0,
             55.0,
@@ -216,10 +281,10 @@ class BreadQualitySimulator:
             process_family = "millet_cultivar_bread"
             calibration_score = 0.6
             notes.append("Covered by proso millet gluten-free bread literature, but cultivar-specific starch data is simplified.")
-        elif chickpea > 0.25 or whey > 0.05:
+        elif protein_enrichment_fraction > 0.045:
             process_family = "protein_enriched_bread"
             calibration_score = 0.6
-            notes.append("Covered by rice/chickpea or rice/whey protein gluten-free bread literature.")
+            notes.append("Covered by legume, dairy, or isolate protein-enriched gluten-free bread literature.")
         elif blend_props.hydrocolloid_pct >= 0.015 and hpmc + guar + xanthan > 0:
             process_family = "hydrocolloid_bread"
             calibration_score = 0.55
