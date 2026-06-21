@@ -107,6 +107,11 @@ def test_rank_application_candidates_supports_pasta_v1(db_session):
     assert result.candidates[0].bread_metrics is None
     assert result.candidates[0].cooking_metrics["cooking_loss_pct"] > 0
     assert "firmness_index" in result.candidates[0].cooking_metrics
+    assert result.candidates[0].cooking_metrics["process_family"] == "fresh_calcium_gel"
+    assert result.candidates[0].process["water_temp_c"] == 100.0
+    assert result.candidates[0].process["water_to_flour_ratio"] == 3.0
+    assert result.candidates[0].process["calcium_lactate_m"] == 0.1
+    assert result.candidates[0].process["calcium_bath_time_min"] == 30.0
     assert result.candidates[0].model_confidence.level in {"low", "medium", "high"}
 
 
@@ -165,6 +170,8 @@ def test_cli_rank_application_writes_pasta_json(tmp_path):
     assert payload["application"] == "Pasta fresca"
     assert len(payload["candidates"]) == 2
     assert payload["candidates"][0]["cooking_metrics"]["cooking_loss_pct"] > 0
+    assert payload["candidates"][0]["cooking_metrics"]["process_family"] == "fresh_calcium_gel"
+    assert payload["candidates"][0]["process"]["calcium_lactate_m"] == 0.1
     assert payload["candidates"][0]["bread_metrics"] is None
 
 

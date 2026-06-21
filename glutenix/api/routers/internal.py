@@ -27,7 +27,7 @@ from glutenix.db.models import (
 from glutenix.engine.blend import BlendCalculator, BlendProperties
 from glutenix.engine.bread import BreadQualityParams, BreadQualityResult, BreadQualitySimulator
 from glutenix.engine.confidence import assess_candidate_confidence, serialize_candidate_confidence
-from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
+from glutenix.engine.cooking import PastaCookingSimulator, pasta_v1_process_params, serialize_pasta_process_params
 from glutenix.engine.fermentation import FermentationParams, FermentationSimulator
 from glutenix.engine.flavor import calculate_blend_flavor, get_flavor_target, score_flavor_against_target
 from glutenix.engine.sweep import SimulationSweeper, SweepRange
@@ -964,23 +964,21 @@ def _best_pasta_process(
 ) -> tuple[float, dict[str, float], dict[str, Any], float, float, float]:
     best_cooking = None
     best_point = None
+    best_params = None
     for point in process_points:
-        cooking = PastaCookingSimulator(PastaCookingParams(
+        params = pasta_v1_process_params(
+            blend_props,
             water_temp_c=point["baking_temp_c"],
             cooking_time_min=point["baking_duration_min"],
-            water_to_flour_ratio=0.9,
-        )).simulate(blend_props)
+        )
+        cooking = PastaCookingSimulator(params).simulate(blend_props)
         if best_cooking is None or cooking.quality_score > best_cooking.quality_score:
             best_cooking = cooking
             best_point = point
-    if best_cooking is None or best_point is None:
+            best_params = params
+    if best_cooking is None or best_point is None or best_params is None:
         raise HTTPException(400, detail="No process points generated")
-    process_data = {
-        "water_temp_c": best_point["baking_temp_c"],
-        "cooking_time_min": best_point["baking_duration_min"],
-        "pasta_thickness_mm": 2.0,
-        "water_to_flour_ratio": 0.9,
-    }
+    process_data = serialize_pasta_process_params(best_params)
     metrics = {
         "water_uptake_pct": best_cooking.water_uptake_pct,
         "cooking_loss_pct": best_cooking.cooking_loss_pct,
