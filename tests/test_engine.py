@@ -525,6 +525,88 @@ class TestBreadQualitySimulator:
         assert result.calibration_confidence == "low"
         assert any("transglutaminase" in note.lower() for note in result.calibration_notes)
 
+    def test_legume_processing_state_affects_bread_structure(self):
+        def chickpea_props(name: str) -> BlendProperties:
+            return BlendProperties(
+                protein_pct=8.8,
+                starch_pct=73.0,
+                water_absorption=1.5,
+                viscosity_index=2.0,
+                hydrocolloid_pct=0.017,
+                amylose_pct=21.0,
+                ingredients_detail=[
+                    {"name": "White rice flour", "proportion": 0.737, "category": "flour"},
+                    {"name": name, "proportion": 0.246, "category": "flour"},
+                    {"name": "HPMC (Hydroxypropyl Methylcellulose)", "proportion": 0.017, "category": "hydrocolloid"},
+                ],
+            )
+
+        params = BreadQualityParams(
+            hydration_pct=85.0,
+            fermentation_temp_c=32.0,
+            fermentation_time_min=30.0,
+            baking_temp_c=215.0,
+            baking_time_min=45.0,
+            yeast_pct=2.5,
+            sugar_pct=2.0,
+            fat_pct=5.3,
+            storage_days=0.083,
+        )
+        sim = BreadQualitySimulator(params)
+        raw = sim.simulate(chickpea_props("Raw chickpea flour"))
+        roasted = sim.simulate(chickpea_props("Roasted chickpea flour"))
+        dehulled = sim.simulate(chickpea_props("Dehulled chickpea flour"))
+
+        assert len({raw.specific_volume_cm3_g, roasted.specific_volume_cm3_g, dehulled.specific_volume_cm3_g}) == 3
+        assert len({raw.crumb_hardness_n, roasted.crumb_hardness_n, dehulled.crumb_hardness_n}) == 3
+        assert len({raw.porosity_pct, roasted.porosity_pct, dehulled.porosity_pct}) == 3
+        assert roasted.specific_volume_cm3_g > raw.specific_volume_cm3_g
+        assert roasted.crumb_hardness_n < raw.crumb_hardness_n
+        assert roasted.porosity_pct > raw.porosity_pct
+
+    def test_protein_source_categories_are_distinguishable(self):
+        def protein_props(name: str) -> BlendProperties:
+            return BlendProperties(
+                protein_pct=12.0,
+                starch_pct=68.0,
+                water_absorption=1.5,
+                viscosity_index=2.0,
+                hydrocolloid_pct=0.0,
+                amylose_pct=22.0,
+                ingredients_detail=[
+                    {"name": "White rice flour", "proportion": 0.9, "category": "flour"},
+                    {"name": name, "proportion": 0.1, "category": "flour"},
+                ],
+            )
+
+        sim = BreadQualitySimulator(BreadQualityParams(hydration_pct=105.0))
+        legume = sim.simulate(protein_props("Chickpea flour"))
+        dairy = sim.simulate(protein_props("Whey protein concentrate"))
+        isolate = sim.simulate(protein_props("Pea protein powder"))
+
+        assert len({legume.specific_volume_cm3_g, dairy.specific_volume_cm3_g, isolate.specific_volume_cm3_g}) == 3
+        assert len({legume.crumb_hardness_n, dairy.crumb_hardness_n, isolate.crumb_hardness_n}) == 3
+        assert dairy.crumb_hardness_n < legume.crumb_hardness_n < isolate.crumb_hardness_n
+
+    def test_pea_protein_is_protein_enriched_bread(self):
+        props = BlendProperties(
+            protein_pct=10.0,
+            starch_pct=70.0,
+            water_absorption=1.5,
+            viscosity_index=2.0,
+            hydrocolloid_pct=0.0,
+            amylose_pct=22.0,
+            ingredients_detail=[
+                {"name": "White rice flour", "proportion": 0.94, "category": "flour"},
+                {"name": "Pea protein powder", "proportion": 0.06, "category": "flour"},
+            ],
+        )
+
+        result = BreadQualitySimulator().simulate(props)
+
+        assert result.process_family == "protein_enriched_bread"
+        assert result.calibration_confidence == "medium"
+
     def test_rejects_invalid_params(self):
         import pytest
 

@@ -310,6 +310,33 @@ def _blend_data_from_record(record: LiteratureRecord, db: Session):
     return blend_data
 
 
+def _apply_bread_record_context(record: LiteratureRecord, props):
+    context = " ".join([
+        record.id.lower(),
+        record.mapping_notes.lower(),
+        " ".join(record.literature_formula).lower(),
+    ])
+    if "chickpea" not in context and "lentil" not in context:
+        return props
+
+    state_prefix = ""
+    if "roasted chickpea" in context or "_rcf" in context:
+        state_prefix = "Roasted "
+    elif "dehulled chickpea" in context or "_dcf" in context:
+        state_prefix = "Dehulled "
+    elif "raw chickpea" in context or "_cf" in context:
+        state_prefix = "Raw "
+
+    for item in props.ingredients_detail:
+        name = str(item.get("name", ""))
+        lowered = name.lower()
+        if "chickpea" in lowered and "red_lentil" in context:
+            item["name"] = "Red lentil flour"
+        elif state_prefix and "chickpea" in lowered:
+            item["name"] = f"{state_prefix}{name}"
+    return props
+
+
 def _record_counts(records: list[LiteratureRecord], key_fn) -> dict[str, int]:
     counts: dict[str, int] = {}
     for record in records:
@@ -426,6 +453,7 @@ def _record_bread_params(record: LiteratureRecord) -> BreadQualityParams:
 
 def _bread_process_family(record: LiteratureRecord) -> str:
     formula_names = " ".join(record.mapped_formula).lower()
+    literature_names = " ".join(record.literature_formula).lower()
     tg_pct = float(record.process.get("tg_pct", 0.0))
     hydrocolloid_terms = ("hpmc", "xanthan", "guar", "psyllium", "alginate", "carrageenan")
     if tg_pct > 0 and any(name in formula_names for name in hydrocolloid_terms):
@@ -436,7 +464,18 @@ def _bread_process_family(record: LiteratureRecord) -> str:
         return "commercial_mix_bread"
     if "millet" in formula_names:
         return "millet_cultivar_bread"
-    if "chickpea" in formula_names or "whey" in formula_names or "pea protein" in formula_names:
+    protein_fraction = sum(
+        proportion
+        for name, proportion in record.mapped_formula.items()
+        if any(token in name.lower() for token in ("chickpea", "whey", "pea protein", "soy", "lentil", "faba", "caseinate"))
+    )
+    if "red_lentil" in literature_names:
+        protein_fraction += sum(
+            proportion
+            for name, proportion in record.mapped_formula.items()
+            if "chickpea" in name.lower()
+        )
+    if protein_fraction > 0.045:
         return "protein_enriched_bread"
     if any(name in formula_names for name in hydrocolloid_terms):
         return "hydrocolloid_bread"
@@ -488,6 +527,7 @@ def compare_bread_baking_records(
     for record in records:
         blend_data = _blend_data_from_record(record, db)
         props = calc.calculate(blend_data)
+        props = _apply_bread_record_context(record, props)
         result = BreadQualitySimulator(_record_bread_params(record)).simulate(props)
         measured_values = {}
         predicted_values = {}
