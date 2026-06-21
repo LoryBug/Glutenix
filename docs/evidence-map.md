@@ -240,7 +240,8 @@ Priority ingredient/process families:
 
 Recommended next action:
 
-- Add after bread, unless a strong pizza paper with complete tables is found first.
+- Use `docs/pizza-v1-literature-audit.md` as the boundary document before adding Pizza V1 ranking or coverage diagnostics.
+- Add a structured pizza dataset only after source tables are extracted with original formula basis, process, and measured endpoints preserved.
 
 ### Lievitati Dolci
 
