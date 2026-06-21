@@ -41,6 +41,7 @@ from glutenix.analysis.feedback import candidate_feedback, experimental_feedback
 from glutenix.analysis.flavor import explain_flavor
 from glutenix.analysis.report import candidate_dossier_markdown, candidate_protocol_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
+from glutenix.calibration.pizza_v1 import PIZZA_V1_AUDIT_DOC
 from glutenix.db.base import Base, SessionLocal
 from glutenix.db.models import Application, Blend, BlendIngredient, ExperimentResult, Ingredient, SimulationCandidate, SimulationRun
 from glutenix.db.seed import _seed_applications, _seed_ingredients
@@ -135,6 +136,15 @@ PRESETS: dict[str, list[IngredientBound]] = {
 
 APPLICATION_PRESETS: dict[str, list[IngredientBound]] = {
     **PRESETS,
+    "pizza-v1": [
+        IngredientBound("White rice flour", 0.20, 0.35),
+        IngredientBound("Sorghum flour", 0.15, 0.30),
+        IngredientBound("Tapioca starch", 0.15, 0.30),
+        IngredientBound("Corn starch", 0.05, 0.15),
+        IngredientBound("Psyllium husk", 0.005, 0.020),
+        IngredientBound("HPMC (Hydroxypropyl Methylcellulose)", 0.0, 0.015),
+        IngredientBound("Xanthan gum", 0.0, 0.005),
+    ],
     "pasta-rice-structure-v1": [
         IngredientBound("High-amylose rice flour", 0.45, 0.65),
         IngredientBound("Brown rice flour", 0.12, 0.28),
@@ -144,6 +154,24 @@ APPLICATION_PRESETS: dict[str, list[IngredientBound]] = {
         IngredientBound("Konjac glucomannan", 0.005, 0.020),
         IngredientBound("Curdlan", 0.005, 0.020),
     ],
+}
+
+APPLICATION_PRESET_PROCESS_BOUNDS: dict[str, ProcessBounds] = {
+    "pizza-v1": ProcessBounds(
+        fermentation_temp_c=(37.0, 37.0),
+        fermentation_duration_min=(120.0, 120.0),
+        baking_temp_c=(204.4, 204.4),
+        baking_duration_min=(10.0, 10.0),
+    ),
+}
+
+APPLICATION_PRESET_METADATA: dict[str, dict[str, str]] = {
+    "pizza-v1": {
+        "application": "Pizza",
+        "evidence_level": "literature_informed_boundaries_only",
+        "audit_doc": PIZZA_V1_AUDIT_DOC,
+        "notes": "Digital screening preset only; no pizza calibration dataset exists yet.",
+    },
 }
 
 
@@ -977,12 +1005,12 @@ def _rank_application_command(args: argparse.Namespace) -> int:
     else:
         bounds = APPLICATION_PRESETS[args.preset]
         preset = args.preset
-    process_bounds = ProcessBounds(
-        fermentation_temp_c=tuple(args.fermentation_temp),
-        fermentation_duration_min=tuple(args.fermentation_duration),
-        baking_temp_c=tuple(args.baking_temp),
-        baking_duration_min=tuple(args.baking_duration),
-    )
+    expected_application = APPLICATION_PRESET_METADATA.get(preset, {}).get("application")
+    if expected_application and args.application.strip().lower() != expected_application.lower():
+        print(f"Preset '{preset}' is intended for application '{expected_application}'.")
+        return 2
+    process_bounds = _application_process_bounds(args, preset)
+
     session = _persistent_session() if args.save_run else None
     try:
         result = rank_application_candidates(
@@ -1021,6 +1049,19 @@ def _rank_application_command(args: argparse.Namespace) -> int:
         if session is not None:
             session.close()
     return 0
+
+
+def _application_process_bounds(args: argparse.Namespace, preset: str) -> ProcessBounds:
+    default_bounds = ProcessBounds()
+    requested = ProcessBounds(
+        fermentation_temp_c=tuple(args.fermentation_temp),
+        fermentation_duration_min=tuple(args.fermentation_duration),
+        baking_temp_c=tuple(args.baking_temp),
+        baking_duration_min=tuple(args.baking_duration),
+    )
+    if preset in APPLICATION_PRESET_PROCESS_BOUNDS and requested == default_bounds:
+        return APPLICATION_PRESET_PROCESS_BOUNDS[preset]
+    return requested
 
 
 def _runs_list_command(args: argparse.Namespace) -> int:

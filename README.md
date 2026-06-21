@@ -249,6 +249,14 @@ uv run glutenix rank-application --application "Pasta fresca" --preset pasta-ric
 
 See `docs/pasta-v1-workflow.md` for Pasta metrics, assumptions, and evidence limits.
 
+Pizza V1 can be screened with conservative evidence-boundary diagnostics:
+
+```bash
+uv run glutenix rank-application --application Pizza --preset pizza-v1 --blend-samples 100 --process-samples 20 --top 10 --seed 42
+```
+
+See `docs/pizza-v1-workflow.md` and `docs/pizza-v1-literature-audit.md` for Pizza V1 assumptions and limits. Pizza V1 is not calibrated; it is a literature-bound digital screening workflow.
+
 To summarize saved candidates and extract robust formulation ranges:
 
 ```bash

@@ -12,6 +12,7 @@ from glutenix.calibration.coverage import (
     build_domain_coverage,
     domain_for_application,
 )
+from glutenix.calibration.pizza_v1 import assess_pizza_v1_coverage, is_pizza_v1_application
 from glutenix.db.models import SimulationCandidate
 
 
@@ -23,6 +24,8 @@ def coverage_gaps_report(
 ) -> dict[str, Any]:
     domain = domain_for_application(application)
     if domain is None:
+        if is_pizza_v1_application(application):
+            return _pizza_v1_report(db, application=application, candidate_id=candidate_id)
         return {
             "application": application,
             "domain": None,
@@ -50,6 +53,56 @@ def coverage_gaps_report(
     }
     if candidate_id is not None:
         report["candidate"] = _candidate_coverage(db, candidate_id, summary.application, summary)
+    return report
+
+
+def _pizza_v1_report(
+    db: Session,
+    *,
+    application: str,
+    candidate_id: int | None,
+) -> dict[str, Any]:
+    report = {
+        "application": application,
+        "domain": "pizza_v1_audit",
+        "status": "candidate_assessed" if candidate_id is not None else "application_summary",
+        "summary": None,
+        "expected_metrics": expected_metrics_for_application(application),
+        "metric_gaps": expected_metrics_for_application(application),
+        "limitations": [
+            "Pizza V1 uses audit-boundary diagnostics only; no structured pizza_baking dataset exists yet.",
+            "Coverage diagnostics are based on docs/pizza-v1-literature-audit.md, not calibration error.",
+        ],
+        "candidate": None,
+        "coverage_diagnostics": None,
+    }
+    if candidate_id is None:
+        return report
+
+    candidate = db.get(SimulationCandidate, candidate_id)
+    if candidate is None:
+        raise ValueError(f"Simulation candidate not found: {candidate_id}")
+    proportions = _json(candidate.proportions)
+    diagnostics = assess_pizza_v1_coverage(
+        ingredient_names=list(proportions),
+        blend_values=_numeric_values(_json(candidate.properties)),
+        process_values=_numeric_values(_json(candidate.process)),
+    )
+    report["coverage_diagnostics"] = diagnostics.as_dict()
+    report["candidate"] = {
+        "candidate_id": candidate.id,
+        "run_id": candidate.run_id,
+        "status": candidate.status,
+        "score": round(candidate.score, 4),
+        "assessment": diagnostics.as_literature_coverage(),
+        "missing_ingredients": [
+            item[11:]
+            for item in diagnostics.unsupported_variables
+            if item.startswith("ingredient:")
+        ],
+        "risk_flags": diagnostics.risk_flags,
+        "basis": diagnostics.basis,
+    }
     return report
 
 
