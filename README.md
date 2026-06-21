@@ -306,8 +306,8 @@ Current sources include:
 
 Current bread baking diagnostic dataset:
 
-- 60 records.
-- 9 peer-reviewed sources.
+- 65 records.
+- 10 peer-reviewed sources.
 - Main metric: `specific_volume_cm3_g`.
 - Auxiliary metrics include crumb hardness, porosity, moisture, water activity, and structure fields where available.
 
@@ -322,6 +322,7 @@ Current bread sources include:
 - Kahraman et al. 2022: raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
 - Bianchi et al. 2026: tapioca starch/red lentil mixture-design gluten-free breads.
 - Ghodosipoor et al. 2025: quinoa flour + HPMC + microbial transglutaminase CCD gluten-free bread optimization.
+- Di Renzo et al. 2024: quinoa/rice/potato bread with HPMC, xanthan, sodium alginate, and kappa carrageenan.
 
 Important limitation: the linear correction in calibration reports is diagnostic only. It is not treated as production calibration.
 

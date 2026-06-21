@@ -134,7 +134,7 @@ class TestIngredients:
         resp = client.get("/ingredients")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 32
+        assert len(data) == 33
 
     def test_get_found(self):
         resp = client.get("/ingredients/1")
@@ -346,7 +346,7 @@ class TestCalibration:
         assert "specific_volume_cm3_g" in data["metric_summaries"]
         assert "porosity_pct" in data["metric_summaries"]
         assert data["record_groups"]["process_family"]["millet_cultivar_bread"] == 9
-        assert data["record_groups"]["process_family"]["hydrocolloid_bread"] == 17
+        assert data["record_groups"]["process_family"]["hydrocolloid_bread"] == 21
         assert data["record_groups"]["process_family"]["enzyme_hydrocolloid_bread"] == 12
         assert data["record_groups"]["process_family"]["protein_enriched_bread"] == 16
         assert len(data["rows"]) == len(records)

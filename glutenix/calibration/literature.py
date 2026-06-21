@@ -410,7 +410,8 @@ def _record_bread_params(record: LiteratureRecord) -> BreadQualityParams:
 def _bread_process_family(record: LiteratureRecord) -> str:
     formula_names = " ".join(record.mapped_formula).lower()
     tg_pct = float(record.process.get("tg_pct", 0.0))
-    if tg_pct > 0 and any(name in formula_names for name in ("hpmc", "xanthan", "guar", "psyllium")):
+    hydrocolloid_terms = ("hpmc", "xanthan", "guar", "psyllium", "alginate", "carrageenan")
+    if tg_pct > 0 and any(name in formula_names for name in hydrocolloid_terms):
         return "enzyme_hydrocolloid_bread"
     if tg_pct > 0:
         return "enzyme_bread"
@@ -420,7 +421,7 @@ def _bread_process_family(record: LiteratureRecord) -> str:
         return "millet_cultivar_bread"
     if "chickpea" in formula_names or "whey" in formula_names or "pea protein" in formula_names:
         return "protein_enriched_bread"
-    if any(name in formula_names for name in ("hpmc", "xanthan", "guar", "psyllium")):
+    if any(name in formula_names for name in hydrocolloid_terms):
         return "hydrocolloid_bread"
     return "generic_gluten_free_bread"
 

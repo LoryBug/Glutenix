@@ -75,6 +75,12 @@ class TestLiteratureCalibration:
         assert all("specific_volume_cm3_g" in record.measured for record in wojcik_records)
         assert all("crumb_hardness_n" in record.measured for record in wojcik_records)
 
+        di_renzo_records = [record for record in records if record.id.startswith("di_renzo_2024_")]
+        assert len(di_renzo_records) == 5
+        assert all(record.source.get("doi") == "10.3390/foods13091382" for record in di_renzo_records)
+        assert all("specific_volume_cm3_g" in record.measured for record in di_renzo_records)
+        assert any("Kappa carrageenan" in record.mapped_formula for record in di_renzo_records)
+
     def test_compare_pasta_cooking_records(self):
         session = _seeded_session()
         try:
@@ -131,8 +137,8 @@ class TestLiteratureCalibration:
             "commercial_mix_bread": 4,
             "enzyme_bread": 1,
             "enzyme_hydrocolloid_bread": 12,
-            "generic_gluten_free_bread": 1,
-            "hydrocolloid_bread": 17,
+            "generic_gluten_free_bread": 2,
+            "hydrocolloid_bread": 21,
             "millet_cultivar_bread": 9,
             "protein_enriched_bread": 16,
         }
@@ -160,13 +166,15 @@ class TestLiteratureCalibration:
         assert "hydrocolloid_bread" in bread["process_families"]
         assert "enzyme_hydrocolloid_bread" in bread["process_families"]
         assert "HPMC (Hydroxypropyl Methylcellulose)" in bread["covered_ingredients"]
+        assert "Kappa carrageenan" in bread["covered_ingredients"]
+        assert "Potato starch" in bread["covered_ingredients"]
 
     def test_literature_coverage_assessment_flags_ood(self):
         session = _seeded_session()
         try:
             assessment = assess_application_literature_coverage(
                 application="Pane",
-                ingredient_names=["White rice flour", "Potato starch"],
+                ingredient_names=["White rice flour", "Sorghum flour"],
                 blend_values={
                     "protein_pct": 5.0,
                     "starch_pct": 90.0,
@@ -189,8 +197,9 @@ class TestLiteratureCalibration:
 
         assert assessment.level in {"low", "medium"}
         assert assessment.risk_flags
-        assert any("Potato starch" in flag for flag in assessment.risk_flags)
-        assert any("hydration_pct" in flag for flag in assessment.risk_flags)
+        assert any("Sorghum flour" in flag for flag in assessment.risk_flags)
+        assert any("baking_temp_c" in flag for flag in assessment.risk_flags)
+        assert any("baking_time_min" in flag for flag in assessment.risk_flags)
 
     def test_literature_coverage_assessment_flags_tg_mechanism_ood(self):
         session = _seeded_session()
