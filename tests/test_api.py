@@ -783,3 +783,47 @@ class TestInternalWorkflow:
         })
 
         assert resp.status_code == 400
+
+    def test_flavor_explanation_accepts_candidate(self):
+        candidate = _create_test_candidate()
+
+        resp = client.post("/analyze/flavor", json={
+            "application": "Pane",
+            "candidate_id": candidate.id,
+        })
+
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        assert payload["target"]["name"] == "Pane"
+        assert payload["flavor_score"] > 0
+        assert "neutral" in payload["profile"]
+        assert payload["contributions"][0]["ingredient"] == "White rice flour"
+        assert payload["evidence_note"].startswith("Flavor explanation is heuristic")
+
+    def test_flavor_explanation_accepts_custom_formula(self):
+        resp = client.post("/analyze/flavor", json={
+            "application": "Pane",
+            "proportions": {
+                "White rice flour": 0.5,
+                "Tapioca starch": 0.28,
+                "Potato starch": 0.2,
+                "Xanthan gum": 0.02,
+            },
+        })
+
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        assert payload["source"]["type"] == "custom"
+        assert len(payload["contributions"]) == 4
+        assert payload["risk_notes"]
+
+    def test_flavor_explanation_rejects_multiple_sources(self):
+        candidate = _create_test_candidate()
+
+        resp = client.post("/analyze/flavor", json={
+            "application": "Pane",
+            "candidate_id": candidate.id,
+            "proportions": {"White rice flour": 1.0},
+        })
+
+        assert resp.status_code == 422

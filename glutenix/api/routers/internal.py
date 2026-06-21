@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
+from glutenix.analysis.flavor import explain_flavor
 from glutenix.calibration.coverage import (
     assess_literature_coverage,
     build_domain_coverage,
@@ -267,6 +268,39 @@ class SensitivityResponse(BaseModel):
     variants: list[SensitivityVariantResponse]
 
 
+class FlavorExplainRequest(BaseModel):
+    application: str = "Pane"
+    candidate_id: int | None = Field(default=None, gt=0)
+    blend_id: int | None = Field(default=None, gt=0)
+    proportions: dict[str, float] | None = None
+
+    @model_validator(mode="after")
+    def exactly_one_source(self):
+        sources = [self.candidate_id is not None, self.blend_id is not None, self.proportions is not None]
+        if sum(sources) != 1:
+            raise ValueError("Provide exactly one of candidate_id, blend_id, or proportions")
+        if self.proportions is not None:
+            total = sum(self.proportions.values())
+            if abs(total - 1.0) > 1e-3:
+                raise ValueError(f"Custom proportions must sum to 1, got {total}")
+            if any(value <= 0 for value in self.proportions.values()):
+                raise ValueError("Custom proportions must be positive")
+        return self
+
+
+class FlavorExplainResponse(BaseModel):
+    application: str
+    target: dict[str, Any]
+    source: dict[str, Any]
+    flavor_score: float
+    profile: dict[str, float]
+    gaps_vs_target: dict[str, float]
+    contributions: list[dict[str, Any]]
+    risk_notes: list[str]
+    interpretation: list[str]
+    evidence_note: str
+
+
 @router.get("/simulation-candidates/cohort", response_model=CohortAnalysisResponse)
 def analyze_simulation_candidate_cohort(
     application: str | None = None,
@@ -443,6 +477,22 @@ def compare_blends(body: BlendCompareRequest, db: Session = Depends(get_db)):
 @router.post("/analyze/sensitivity", response_model=SensitivityResponse)
 def analyze_sensitivity(body: SensitivityRequest, db: Session = Depends(get_db)):
     return run_sensitivity_analysis(db, body)
+
+
+@router.post("/analyze/flavor", response_model=FlavorExplainResponse)
+def analyze_flavor(body: FlavorExplainRequest, db: Session = Depends(get_db)):
+    try:
+        return explain_flavor(
+            db,
+            application=body.application,
+            candidate_id=body.candidate_id,
+            blend_id=body.blend_id,
+            proportions=body.proportions,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        status = 404 if "not found" in message.lower() else 400
+        raise HTTPException(status, detail=message) from exc
 
 
 def run_blend_comparison(db: Session, body: BlendCompareRequest) -> BlendCompareResponse:
