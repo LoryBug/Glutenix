@@ -20,10 +20,11 @@ def test_pasta_workflow_records_next_requirements():
     workflow = get_application_workflow("Pasta fresca")
 
     assert workflow is not None
-    assert workflow.status == "planned_v1"
+    assert workflow.status == "experimental_v1"
     assert workflow.literature_domain == "pasta_cooking"
     assert "cooking_loss_pct" in workflow.primary_metrics
-    assert workflow.ranking_command is None
+    assert "water_uptake_pct" in workflow.primary_metrics
+    assert workflow.ranking_command is not None
     assert workflow.next_requirements
 
 

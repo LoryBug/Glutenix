@@ -132,6 +132,19 @@ PRESETS: dict[str, list[IngredientBound]] = {
     ],
 }
 
+APPLICATION_PRESETS: dict[str, list[IngredientBound]] = {
+    **PRESETS,
+    "pasta-rice-structure-v1": [
+        IngredientBound("High-amylose rice flour", 0.45, 0.65),
+        IngredientBound("Brown rice flour", 0.12, 0.28),
+        IngredientBound("Sweet rice flour (Mochiko)", 0.08, 0.22),
+        IngredientBound("Soy protein isolate", 0.03, 0.08),
+        IngredientBound("Sodium alginate", 0.008, 0.018),
+        IngredientBound("Konjac glucomannan", 0.005, 0.020),
+        IngredientBound("Curdlan", 0.005, 0.020),
+    ],
+}
+
 
 def rank_pane_candidates(
     *,
@@ -862,7 +875,7 @@ def _rank_application_command(args: argparse.Namespace) -> int:
         bounds = custom_bounds
         preset = "custom"
     else:
-        bounds = PRESETS[args.preset]
+        bounds = APPLICATION_PRESETS[args.preset]
         preset = args.preset
     process_bounds = ProcessBounds(
         fermentation_temp_c=tuple(args.fermentation_temp),
@@ -1348,7 +1361,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Rank application-specific blend candidates using process, blend, flavor, and confidence engines.",
     )
     rank_application.add_argument("--application", default="Pane", help="Application name, for example Pane or Pasta fresca.")
-    rank_application.add_argument("--preset", choices=sorted(PRESETS), default="bobs-inspired")
+    rank_application.add_argument("--preset", choices=sorted(APPLICATION_PRESETS), default="bobs-inspired")
     rank_application.add_argument(
         "--ingredient",
         action="append",

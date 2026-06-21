@@ -4,6 +4,7 @@ import pytest
 
 import glutenix.cli as cli_mod
 from glutenix.cli import (
+    APPLICATION_PRESETS,
     PRESETS,
     list_saved_runs,
     main,
@@ -85,6 +86,30 @@ def test_rank_application_candidates_returns_application_suggestion(db_session):
     assert result.candidates[0].bread_metrics["specific_volume_cm3_g"] > 0
 
 
+def test_rank_application_candidates_supports_pasta_v1(db_session):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+
+    result = rank_application_candidates(
+        application="Pasta fresca",
+        bounds=APPLICATION_PRESETS["pasta-rice-structure-v1"],
+        n_blend_samples=10,
+        n_process_samples=5,
+        top=3,
+        seed=43,
+        db=db_session,
+    )
+
+    assert result.application == "Pasta fresca"
+    assert len(result.candidates) == 3
+    assert result.candidates[0].cooking_metrics is not None
+    assert result.candidates[0].bread_metrics is None
+    assert result.candidates[0].cooking_metrics["cooking_loss_pct"] > 0
+    assert "firmness_index" in result.candidates[0].cooking_metrics
+    assert result.candidates[0].model_confidence.level in {"low", "medium", "high"}
+
+
 def test_cli_rank_application_writes_json(tmp_path):
     output_path = tmp_path / "application-ranking.json"
 
@@ -114,8 +139,39 @@ def test_cli_rank_application_writes_json(tmp_path):
     assert "model_confidence" in payload["candidates"][0]
 
 
+def test_cli_rank_application_writes_pasta_json(tmp_path):
+    output_path = tmp_path / "pasta-ranking.json"
+
+    exit_code = main([
+        "rank-application",
+        "--application",
+        "Pasta fresca",
+        "--preset",
+        "pasta-rice-structure-v1",
+        "--blend-samples",
+        "10",
+        "--process-samples",
+        "5",
+        "--top",
+        "2",
+        "--seed",
+        "8",
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["application"] == "Pasta fresca"
+    assert len(payload["candidates"]) == 2
+    assert payload["candidates"][0]["cooking_metrics"]["cooking_loss_pct"] > 0
+    assert payload["candidates"][0]["bread_metrics"] is None
+
+
 def test_pane_presets_reference_seeded_ingredient_names():
     assert {"sorghum-baseline", "bobs-inspired", "schaer-inspired"}.issubset(PRESETS)
+    assert "pasta-rice-structure-v1" in APPLICATION_PRESETS
+    assert "pasta-rice-structure-v1" not in PRESETS
 
 
 def test_save_list_and_mark_pane_run(db_session):
