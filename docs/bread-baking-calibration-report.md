@@ -6,33 +6,7 @@ This report compares the early `BreadQualitySimulator` against structured gluten
 
 ## Sources
 
-- Singh M, Adedeji AA. `Proso Millet Cultivar Effects on Rheology of Dough and Quality Characteristics of Gluten-Free Breads`. Foods, 2026, 15(10):1711.
-  - DOI: `10.3390/foods15101711`
-  - PMCID: `PMC13206684`
-- Torres-Perez R, Siguero-Tudela MM, Domenech T, Garcia-Segovia P, Martinez-Monzo J, Igual M. `Effect of Additive Removal on the Physicochemical Properties of Gluten-Free Bread`. Foods, 2026, 15(2):338.
-  - DOI: `10.3390/foods15020338`
-  - PMCID: `PMC12841426`
-- Loncaric P, Jukic M, Cozmuta AM, et al. `FTIR-Based Study of Starch Retrogradation and Protein Structure in Chickpea-Enriched Gluten-Free Bread During Storage`. Foods, 2026, 15(3):412.
-  - DOI: `10.3390/foods15030412`
-  - PMCID: `PMC12897030`
-- Parsamajd S, et al. `Synergistic Effects of Hydrocolloid Combinations on Gluten-Free Batter and Bread Characteristics`. Food Science & Nutrition, 2025.
-  - DOI: `10.1002/fsn3.71107`
-  - PMCID: `PMC12540201`
-- Belorio M, Gomez M. `Effect of Hydration on Gluten-Free Breads Made with Hydroxypropyl Methylcellulose in Comparison with Psyllium and Xanthan Gum`. Foods, 2020, 9(11):1548.
-  - DOI: `10.3390/foods9111548`
-  - PMCID: `PMC7693925`
-- Wojcik M, Rozylo R, Schonlechner R, Berger MV. `Physico-chemical properties of an innovative gluten-free, low-carbohydrate and high protein-bread enriched with pea protein powder`. Scientific Reports, 2021, 11:14498.
-  - DOI: `10.1038/s41598-021-93834-0`
-  - PMCID: `PMC8280221`
-- Kahraman G, Harsa S, Casiraghi MC, Lucisano M, Cappa C. `Impact of Raw, Roasted and Dehulled Chickpea Flours on Technological and Nutritional Characteristics of Gluten-Free Bread`. Foods, 2022, 11(2):199.
-  - DOI: `10.3390/foods11020199`
-  - PMCID: `PMC8774402`
-- Bianchi F, et al. `Gluten-Free Bread with Tapioca Starch and Red Lentil Flour: A Mixture Design Approach`. Foods, 2026, 15(7):1230.
-  - DOI: `10.3390/foods15071230`
-  - PMCID: `PMC13072981`
-- Ghodosipoor Z, Zahed O, Fallahzadeh H, Mollakhalili-Meybodi N, Nematollahi A. `Optimization of Quinoa-Based Gluten-Free Bread Production Using Microbial Transglutaminase Enzyme and Hydroxypropyl Methyl Cellulose (HPMC) by Response Surface Methodology`. Food Science & Nutrition, 2025.
-  - DOI: `10.1002/fsn3.70891`
-  - PMCID: `PMC12400160`
+Source metadata is centralized in `data/literature/sources.json` and rendered in `docs/generated/bibliography.md`. Bread records currently reference these source IDs: `singh_2026`, `torres_perez_2026`, `loncaric_2026`, `parsamajd_2025`, `belorio_gomez_2020`, `wojcik_2021`, `kahraman_2022`, `bianchi_2026`, `ghodosipoor_2025`, and `di_renzo_2024`.
 
 <!-- generated-start: bread-calibration-summary -->
 ## Dataset

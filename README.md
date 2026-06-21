@@ -338,7 +338,10 @@ Use `--check` in validation to fail when generated report tables are stale.
 
 Useful files:
 
+- `data/literature/sources.json`
 - `data/literature/pasta_cooking.jsonl`
+- `data/literature/bread_baking.jsonl`
+- `docs/generated/bibliography.md`
 - `docs/pasta-cooking-calibration-report.md`
 - `docs/bread-baking-calibration-report.md`
 - `docs/literature-extraction-template.md`

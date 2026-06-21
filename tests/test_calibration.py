@@ -5,11 +5,14 @@ from sqlalchemy.orm import Session
 
 from glutenix.calibration.literature import (
     DEFAULT_BREAD_DATASET,
+    DEFAULT_SOURCE_REGISTRY,
     compare_bread_baking_records,
     compare_pasta_cooking_records,
+    load_literature_sources,
     load_literature_records,
     pasta_calibration_report_markdown,
     validate_literature_dataset,
+    validate_literature_source_references,
 )
 from glutenix.calibration.coverage import (
     assess_application_literature_coverage,
@@ -33,9 +36,20 @@ class TestLiteratureCalibration:
     def test_load_literature_records(self):
         records = load_literature_records()
         assert len(records) == 42
+        assert records[0].source_id == "lux_2023"
         assert records[0].measured["cooking_loss_pct"] > 0
         assert "water_absorption_pct" in records[0].measured
         assert abs(sum(records[0].mapped_formula.values()) - 1.0) < 1e-6
+
+    def test_literature_source_registry_references(self):
+        sources = load_literature_sources(DEFAULT_SOURCE_REGISTRY)
+        summary = validate_literature_source_references()
+
+        assert len(sources) == 15
+        assert summary["source_count"] == 15
+        assert summary["record_count"] == 107
+        assert summary["counts_by_source_id"]["lux_2023"] == 30
+        assert summary["counts_by_source_id"]["di_renzo_2024"] == 5
 
     def test_validate_literature_dataset_summary(self):
         summary = validate_literature_dataset()
@@ -77,6 +91,7 @@ class TestLiteratureCalibration:
 
         di_renzo_records = [record for record in records if record.id.startswith("di_renzo_2024_")]
         assert len(di_renzo_records) == 5
+        assert all(record.source_id == "di_renzo_2024" for record in di_renzo_records)
         assert all(record.source.get("doi") == "10.3390/foods13091382" for record in di_renzo_records)
         assert all("specific_volume_cm3_g" in record.measured for record in di_renzo_records)
         assert any("Kappa carrageenan" in record.mapped_formula for record in di_renzo_records)

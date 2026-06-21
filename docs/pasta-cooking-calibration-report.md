@@ -4,26 +4,9 @@ Date: 2026-06-18
 
 This report compares the current `PastaCookingSimulator` against literature cooking-loss values extracted from Lux et al. 2023, Liu et al. 2026, Detchewa et al. 2016, and Bouasla & Wojtowicz 2019/2021.
 
-Source:
+## Sources
 
-- Lux nee Bantleon T, Spillmann F, Reimold F, Erdos A, Lochny A, Floter E. `Physical quality of gluten-free doughs and fresh pasta made of amaranth`. Food Science & Nutrition, 2023, 11(6):3213-3223.
-- DOI: `10.1002/fsn3.3301`
-- PMCID: `PMC10261804`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC10261804/`
-- Liu Q, Zhang S, Lin C, et al. `Synergistic effects of konjac glucomannan and curdlan on the qualities and starch digestibility of extruded gluten-free rice pasta`. Food Chemistry X, 2026, 33:103403.
-- DOI: `10.1016/j.fochx.2025.103403`
-- PMCID: `PMC12769803`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC12769803/`
-- Detchewa P, Thongngam M, Jane JL, Naivikul O. `Preparation of gluten-free rice spaghetti with soy protein isolate using twin-screw extrusion`. Journal of Food Science and Technology, 2016, 53(9):3485-3494.
-- DOI: `10.1007/s13197-016-2323-8`
-- PMCID: `PMC5069250`
-- URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC5069250/`
-- Bouasla A, Wojtowicz A. `Rice-Buckwheat Gluten-Free Pasta: Effect of Processing Parameters on Quality Characteristics and Optimization of Extrusion-Cooking Process`. Foods, 2019, 8(10):496.
-- DOI: `10.3390/foods8100496`
-- URL: `https://www.mdpi.com/2304-8158/8/10/496`
-- Bouasla A, Wojtowicz A. `Gluten-Free Rice Instant Pasta: Effect of Extrusion-Cooking Parameters on Selected Quality Attributes and Microstructure`. Processes, 2021, 9(4):693.
-- DOI: `10.3390/pr9040693`
-- URL: `https://www.mdpi.com/2227-9717/9/4/693`
+Source metadata is centralized in `data/literature/sources.json` and rendered in `docs/generated/bibliography.md`. Pasta records currently reference these source IDs: `lux_2023`, `liu_2026`, `detchewa_2016`, `bouasla_2019`, and `bouasla_2021`.
 
 ## Dataset
 
