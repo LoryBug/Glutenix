@@ -446,3 +446,50 @@ def test_cli_candidate_protocol_rejects_invalid_batch(db_session, monkeypatch):
 
     with pytest.raises(SystemExit, match="batch_g must be positive"):
         main(["candidates", "protocol", "1", "--batch-g", "0"])
+
+
+def test_cli_coverage_gaps_writes_candidate_json(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=17,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=17,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate_id = run.candidates[0].id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "coverage-gaps.json"
+
+    exit_code = main([
+        "coverage",
+        "gaps",
+        "--application",
+        "Pane",
+        "--candidate-id",
+        str(candidate_id),
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["application"] == "Pane"
+    assert payload["domain"] == "bread_baking"
+    assert payload["summary"]["record_count"] > 0
+    assert "specific_volume_cm3_g" in payload["expected_metrics"]
+    assert payload["candidate"]["candidate_id"] == candidate_id
+    assert payload["candidate"]["assessment"]["level"] in {"low", "medium", "high"}
