@@ -329,6 +329,7 @@ class TestCalibration:
         assert "process_family" in data["grouped_errors"]
         assert data["record_groups"]["process_family"]["fresh_calcium_gel"] == 30
         assert data["record_groups"]["process_family"]["dried_extruded"] == 10
+        assert data["record_groups"]["process_family"]["instant_extruded"] == 2
         assert len(data["rows"]) == len(records)
 
     def test_bread_baking_calibration(self):

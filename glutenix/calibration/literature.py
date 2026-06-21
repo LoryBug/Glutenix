@@ -213,6 +213,9 @@ def _parse_flour_water_ratio(value: Any) -> float | None:
 
 
 def _record_cooking_params(record: LiteratureRecord) -> PastaCookingParams:
+    extrusion_barrel_temp_c = record.process.get("extrusion_barrel_temp_c")
+    if extrusion_barrel_temp_c is None and record.process.get("extrusion_zone_temps_c"):
+        extrusion_barrel_temp_c = max(float(value) for value in record.process["extrusion_zone_temps_c"])
     return PastaCookingParams(
         water_temp_c=float(record.process.get("water_temp_c", 98.0)),
         cooking_time_min=float(record.process["cooking_time_min"]),
@@ -228,6 +231,17 @@ def _record_cooking_params(record: LiteratureRecord) -> PastaCookingParams:
             if "extrusion_moisture_pct" in record.process
             else None
         ),
+        extrusion_barrel_temp_c=(
+            float(extrusion_barrel_temp_c)
+            if extrusion_barrel_temp_c is not None
+            else None
+        ),
+        screw_speed_rpm=(
+            float(record.process["screw_speed_rpm"])
+            if "screw_speed_rpm" in record.process
+            else None
+        ),
+        instant_pasta=bool(record.process.get("instant_pasta", False)),
     )
 
 
@@ -248,6 +262,8 @@ def _source_label(record: LiteratureRecord) -> str:
 
 
 def _process_family(record: LiteratureRecord) -> str:
+    if record.process.get("dried_pasta") and record.process.get("instant_pasta"):
+        return "instant_extruded"
     if record.process.get("dried_pasta"):
         return "dried_extruded"
     if (
@@ -380,9 +396,10 @@ def compare_pasta_cooking_records(
         },
         "rows": [row.__dict__ for row in rows],
         "limitations": [
-            "Dataset currently contains cooking-loss rows from three papers.",
+            "Dataset currently contains cooking-loss rows from five papers.",
             "Lux et al. uses calcium-mediated alginate gelation; the simulator has a simplified gelation term, not a validated gel-network model.",
             "Liu and Detchewa use dried twin-screw extruded rice pasta; the simulator has a simplified dried-extruded branch, not a general extrusion model.",
+            "Bouasla and Wojtowicz 2019/2021 use instant extrusion-cooked pasta; the simulator separates this low-loss process family from dried-extruded rice pasta.",
             "Ingredient parameters are approximate literature averages.",
             "Linear correction is diagnostic; do not treat as calibrated production model yet.",
         ],

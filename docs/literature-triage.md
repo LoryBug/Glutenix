@@ -18,6 +18,8 @@ The search prioritized papers with extractable quantitative tables for:
 | Class | Meaning |
 |---|---|
 | `calibration-ready` | Has endpoint metrics directly comparable to existing simulators plus usable formula/process detail. |
+| `structured` | Already represented in `data/literature/*.jsonl` with direct table-backed values. |
+| `structured-partial` | Already represented in `data/literature/*.jsonl`, but with explicit limitations such as figure-estimated values or missing raw run tables. |
 | `ingredient-parameter` | Has composition or functionality data useful for seed ingredient parameters or blend feature logic. |
 | `sensory/target` | Useful for application targets or acceptability, but not direct simulator calibration. |
 | `background only` | Mechanistic or review context without structured extraction-ready data. |
@@ -35,12 +37,11 @@ The search prioritized papers with extractable quantitative tables for:
 |---:|---|---|---|---|
 | 1 | Ghodosipoor et al. 2025, quinoa bread with microbial transglutaminase and HPMC, DOI `10.1002/fsn3.70891` | Bread | `calibration-ready` | 13-run design with HPMC/TG, specific volume, moisture, hardness, acceptability, and validation data. |
 | 2 | Bianchi et al. 2026, tapioca starch and red lentil GF bread, DOI `10.3390/foods15071230` | Bread | `calibration-ready` | Mixture design with volume, height, baking loss, TPA, pore metrics, moisture, aw, and pGI. |
-| 3 | Bouasla & Wojtowicz 2019, rice-buckwheat extrusion pasta, DOI `10.3390/foods8100496` | Pasta | `calibration-ready` | Factorial extrusion process data with cooking loss, texture, WAC, color, sensory, and optimized conditions. |
-| 4 | Pasini et al. 2025, tomato/linseed by-product GF pasta, DOI `10.1002/fsn3.71105` | Pasta | `calibration-ready` | Modern ingredient dose-response with cooking loss, water absorption, firmness, color, starch fractions, and pGI. |
-| 5 | Sanchez et al. 2002, cornstarch/rice/cassava GF bread optimization, DOI `10.1111/j.1365-2621.2002.tb11420.x` | Bread | `calibration-ready` | Simple starch/flour system valuable for starch-type and optimizer sanity checks. |
-| 6 | Sciarini et al. 2010, gluten-free flours and mixtures, DOI `10.1007/s11947-008-0098-2` | Bread | `calibration-ready` | Bridges flour mixture properties, batter behavior, and bread quality. |
-| 7 | Marco & Rosell 2008, protein-enriched GF composite flours, DOI `10.1016/j.jfoodeng.2008.01.018` | Ingredient | `ingredient-parameter` | Useful for protein-source functionality and seed parameters. |
-| 8 | Quiñones et al. 2015, composite flour blends, DOI `10.7603/s40934-015-0003-3` | Ingredient/Targets | `sensory/target` | New composite flour blend evidence for rice, potato, cassava, millet, and corn blends. |
+| 3 | Pasini et al. 2025, tomato/linseed by-product GF pasta, DOI `10.1002/fsn3.71105` | Pasta | `calibration-ready` | Modern ingredient dose-response with cooking loss, water absorption, firmness, color, starch fractions, and pGI. |
+| 4 | Sanchez et al. 2002, cornstarch/rice/cassava GF bread optimization, DOI `10.1111/j.1365-2621.2002.tb11420.x` | Bread | `calibration-ready` | Simple starch/flour system valuable for starch-type and optimizer sanity checks. |
+| 5 | Sciarini et al. 2010, gluten-free flours and mixtures, DOI `10.1007/s11947-008-0098-2` | Bread | `calibration-ready` | Bridges flour mixture properties, batter behavior, and bread quality. |
+| 6 | Marco & Rosell 2008, protein-enriched GF composite flours, DOI `10.1016/j.jfoodeng.2008.01.018` | Ingredient | `ingredient-parameter` | Useful for protein-source functionality and seed parameters. |
+| 7 | Quiñones et al. 2015, composite flour blends, DOI `10.7603/s40934-015-0003-3` | Ingredient/Targets | `sensory/target` | New composite flour blend evidence for rice, potato, cassava, millet, and corn blends. |
 
 ## Bread Candidates
 
@@ -68,8 +69,8 @@ The search prioritized papers with extractable quantitative tables for:
 
 | Paper | Class | Likely Extractable Data | Use In Glutenix | Priority |
 |---|---|---|---|---|
-| Bouasla & Wojtowicz 2019, rice-buckwheat pasta extrusion, DOI `10.3390/foods8100496`, PMCID `PMC6835652` | `calibration-ready` | cooking loss, hardness, firmness, stickiness, WAC, expansion, color, sensory, process factors | Adds extrusion process-response calibration | High |
-| Bouasla & Wojtowicz 2021, rice instant pasta extrusion, DOI `10.3390/pr9040693` | `calibration-ready` | cooking time, WAC, cooking loss, hardness/firmness, stickiness, SME, microstructure | Isolates rice-pasta process effects | High |
+| Bouasla & Wojtowicz 2019, rice-buckwheat pasta extrusion, DOI `10.3390/foods8100496`, PMCID `PMC6835652` | `structured` | optimum cooking loss, hardness, firmness, stickiness, WAC, process factors | Added `bouasla_2019_rice_buckwheat_optimum` to `pasta_cooking.jsonl` | Done |
+| Bouasla & Wojtowicz 2021, rice instant pasta extrusion, DOI `10.3390/pr9040693` | `structured-partial` | approximate optimum cooking time, WAC, cooking loss, hardness/firmness, stickiness | Added `bouasla_2021_rice_instant_optimum`; raw run table is not published | Done |
 | Bolarinwa & Oyesiji 2021, rice-soy pasta, DOI `10.1016/j.heliyon.2021.e06052`, PMCID `PMC7848634` | `calibration-ready` | cooking time, cooking loss, color, TPA, sensory, proximate composition | Adds soy flour/tapioca gradient, distinct from soy isolate spaghetti | High |
 | Llavata et al. 2019/2020, tiger nut/chickpea/fenugreek fresh pasta, DOI `10.3390/foods9010011`, PMCID `PMC7022698` | `calibration-ready` | cooking loss, swelling, rheology, color, sensory/nutrition, pGI | Adds fiber-rich fresh pasta and natural hydrocolloid effects | High |
 | Cervini et al. 2021, resistant starch sorghum in GF pasta, DOI `10.3390/foods10050908`, PMCID `PMC8143101` | `calibration-ready` | optimal cooking time, cooking loss, firmness, stickiness, color, sensory, resistant starch, hydrolysis index | Adds resistant starch dose-response | High |
@@ -98,9 +99,8 @@ The search prioritized papers with extractable quantitative tables for:
 
 1. **Extract remaining starch/legume bread mixture-design records**: Sanchez 2002 and Santos 2018 if individual response values can be recovered. Bianchi 2026 is already structured in `bread_baking.jsonl`.
 2. **Expand bread texture coverage**: prioritize papers with table-backed crumb hardness/firmness, because Di Renzo 2024 adds useful hydrocolloid volume/bake-loss data but no crumb-hardness table.
-3. **Extract pasta process-response records**: Bouasla & Wojtowicz 2019 and 2021. Focus on extrusion moisture, temperature, screw speed, cooking loss, texture, WAC.
-4. **Extract protein/fiber-enriched pasta records**: Pasini 2025, Bolarinwa & Oyesiji 2021, Laleg 2016. Focus on ingredient substitution, cooking loss, firmness, water absorption, sensory.
-5. **Extract ingredient-parameter records**: Marco & Rosell 2008, Quiñones 2015, Mancebo 2015. Focus on water binding, proximate composition, rheology, hydrocolloid/protein parameters.
+3. **Extract protein/fiber-enriched pasta records**: Pasini 2025, Bolarinwa & Oyesiji 2021, Laleg 2016. Focus on ingredient substitution, cooking loss, firmness, water absorption, sensory.
+4. **Extract ingredient-parameter records**: Marco & Rosell 2008, Quiñones 2015, Mancebo 2015. Focus on water binding, proximate composition, rheology, hydrocolloid/protein parameters.
 
 ## Validation Plan
 

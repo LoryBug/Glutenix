@@ -2,7 +2,7 @@
 
 Date: 2026-06-18
 
-This report compares the current `PastaCookingSimulator` against literature cooking-loss values extracted from Lux et al. 2023, Liu et al. 2026, and Detchewa et al. 2016.
+This report compares the current `PastaCookingSimulator` against literature cooking-loss values extracted from Lux et al. 2023, Liu et al. 2026, Detchewa et al. 2016, and Bouasla & Wojtowicz 2019/2021.
 
 Source:
 
@@ -18,10 +18,16 @@ Source:
 - DOI: `10.1007/s13197-016-2323-8`
 - PMCID: `PMC5069250`
 - URL: `https://pmc.ncbi.nlm.nih.gov/articles/PMC5069250/`
+- Bouasla A, Wojtowicz A. `Rice-Buckwheat Gluten-Free Pasta: Effect of Processing Parameters on Quality Characteristics and Optimization of Extrusion-Cooking Process`. Foods, 2019, 8(10):496.
+- DOI: `10.3390/foods8100496`
+- URL: `https://www.mdpi.com/2304-8158/8/10/496`
+- Bouasla A, Wojtowicz A. `Gluten-Free Rice Instant Pasta: Effect of Extrusion-Cooking Parameters on Selected Quality Attributes and Microstructure`. Processes, 2021, 9(4):693.
+- DOI: `10.3390/pr9040693`
+- URL: `https://www.mdpi.com/2227-9717/9/4/693`
 
 ## Dataset
 
-Records: 40
+Records: 42
 
 Metric used for calibration: `cooking_loss_pct`
 
@@ -38,6 +44,8 @@ Coverage:
 - Source tables: `Table 2a`, `Table 2b`
 - Extruded dried high-amylose rice pasta: RF, RF+KGM, RF+KGM+CUD 1/2/3%
 - Extruded dried high-amylose/waxy rice spaghetti: SPI 0/2.5/5/7.5/10%
+- Instant extrusion-cooked rice-buckwheat optimum: 30% moisture, 120 C barrel temperature, 80 rpm.
+- Instant extrusion-cooked rice optimum: 30% moisture, 80 rpm; response values estimated from published surface figures because no raw run table is published.
 - Liu water absorption was converted from `M2/M1*100` to net uptake by subtracting `100`.
 - Detchewa water adsorption index is retained but not included in `water_absorption_pct` summary because its scale differs strongly from the current simulator target.
 
@@ -49,6 +57,8 @@ Mapped ingredients:
 - `konjac_glucomannan` -> `Konjac glucomannan`.
 - `curdlan` -> `Curdlan`.
 - `soy_protein_isolate` -> `Soy protein isolate`.
+- `rice_flour` / `polished_rice_flour` -> `White rice flour`.
+- `buckwheat_flour` -> `Buckwheat flour`.
 
 These are direct mappings after adding the missing literature ingredients to the database seed.
 
@@ -56,17 +66,17 @@ These are direct mappings after adding the missing literature ingredients to the
 
 | Stage | MAE | RMSE | Bias |
 |---|---:|---:|---:|
-| Before correction | 1.1078 | 1.3647 | 0.2267 |
-| After linear correction | 1.1302 | 1.3456 | 0.0 |
+| Before correction | 1.065 | 1.3326 | 0.2155 |
+| After linear correction | 1.0859 | 1.315 | 0.0 |
 
-The raw cooking-loss MAE is now `1.1078` across three papers. The diagnostic linear correction is effectively identity (`beta` near `1`), so raw model behavior is now more meaningful than post-hoc correction.
+The raw cooking-loss MAE is now `1.065` across five papers. The diagnostic linear correction is effectively identity (`beta` near `1`), so raw model behavior is now more meaningful than post-hoc correction.
 
 ## Metric Summary
 
 | Metric | MAE | RMSE | Bias | Interpretation |
 |---|---:|---:|---:|---|
-| `cooking_loss_pct` | 1.1078 | 1.3647 | 0.2267 | Good cross-source raw fit across three papers. |
-| `water_absorption_pct` | 4.44 | 5.3165 | 0.1931 | Improved after stronger syneresis/water-release terms, still weakest metric. |
+| `cooking_loss_pct` | 1.065 | 1.3326 | 0.2155 | Good cross-source raw fit across five papers. |
+| `water_absorption_pct` | 4.5586 | 5.4525 | 0.3646 | Improved after stronger syneresis/water-release terms, still weakest metric. |
 | `swelling_index` | 0.4973 | 0.6294 | 0.0041 | Directionally good for ratio-driven swelling. |
 
 ## Grouped Raw Error
@@ -78,6 +88,8 @@ By source:
 | `10.1002/fsn3.3301` | 30 | 1.0653 | 1.3146 | 0.3487 |
 | `10.1016/j.fochx.2025.103403` | 5 | 1.158 | 1.2518 | -1.158 |
 | `10.1007/s13197-016-2323-8` | 5 | 1.312 | 1.721 | 0.88 |
+| `10.3390/foods8100496` | 1 | 0.22 | 0.22 | -0.22 |
+| `10.3390/pr9040693` | 1 | 0.2 | 0.2 | 0.2 |
 
 By process family:
 
@@ -85,6 +97,7 @@ By process family:
 |---|---:|---:|---:|---:|
 | `fresh_calcium_gel` | 30 | 1.0653 | 1.3146 | 0.3487 |
 | `dried_extruded` | 10 | 1.235 | 1.5048 | -0.139 |
+| `instant_extruded` | 2 | 0.21 | 0.2102 | -0.01 |
 
 By amaranth flour:water ratio:
 
@@ -95,23 +108,23 @@ By amaranth flour:water ratio:
 | `1:6` | 1.1033 | 1.2559 | 0.2833 |
 | `1:8` | 0.995 | 1.0463 | -0.3517 |
 | `1:10` | 0.7417 | 0.814 | -0.0817 |
-| `unknown` | 0.582 | 0.741 | 0.566 |
+| `unknown` | 1.0642 | 1.3764 | -0.1175 |
 
 By sodium alginate level:
 
 | Alginate % | MAE | RMSE | Bias |
 |---|---:|---:|---:|
-| `0.0` | 0.582 | 0.741 | 0.566 |
+| `0.0` | 1.0642 | 1.3764 | -0.1175 |
 | `1.0` | 1.3733 | 1.6612 | 1.276 |
 | `1.5` | 0.7573 | 0.8347 | -0.5787 |
 
 ## Linear Correction
 
 ```text
-corrected = -0.236598 + 1.001497 * simulated
+corrected = -0.223517 + 1.001238 * simulated
 ```
 
-This correction is diagnostic only. With three papers it is less obviously single-source-overfit, but the source count is still too small for production calibration.
+This correction is diagnostic only. With five papers it is less obviously single-source-overfit, but the source count is still too small for production calibration.
 
 ## Rows
 
@@ -157,18 +170,20 @@ This correction is diagnostic only. With three papers it is less obviously singl
 | detchewa_2016_gfrs_spi5 | 13.7 | None | 17.0 | 17.2 | 16.9891 | 0.2 | 0.0 | 0.0 | 0.0 |
 | detchewa_2016_gfrs_spi7_5 | 13.1 | None | 21.0 | 20.37 | 20.1639 | -0.63 | 0.0 | 0.0 | 0.0 |
 | detchewa_2016_gfrs_spi10 | 13.1 | None | 21.8 | 24.78 | 24.5805 | 2.98 | 0.0 | 0.0 | 0.0 |
+| bouasla_2019_rice_buckwheat_optimum | 8.5 | None | 5.23 | 5.01 | 4.7927 | -0.22 | 0.0 | 0.0 | 0.0 |
+| bouasla_2021_rice_instant_optimum | 9.0 | None | 4.5 | 4.7 | 4.4823 | 0.2 | 0.0 | 0.0 | 0.0 |
 
 ## Interpretation
 
-The simulator now captures the main Lux 2023 mechanisms explicitly: calcium-mediated alginate gelation, flour:water ratio, pregelatinization, starch leaching, and syneresis/water release in high-water alginate gels. It also includes dried-extruded rice pasta branches for Liu 2026 and Detchewa 2016: KGM increases water uptake/cooking loss, curdlan reduces cooking loss through a heat-set gel network, and SPI has an optimum around 5% before high-protein disruption increases loss again.
+The simulator now captures the main Lux 2023 mechanisms explicitly: calcium-mediated alginate gelation, flour:water ratio, pregelatinization, starch leaching, and syneresis/water release in high-water alginate gels. It also includes dried-extruded rice pasta branches for Liu 2026 and Detchewa 2016: KGM increases water uptake/cooking loss, curdlan reduces cooking loss through a heat-set gel network, and SPI has an optimum around 5% before high-protein disruption increases loss again. Bouasla 2019/2021 add an `instant_extruded` process family for low-loss extrusion-cooked rice and rice-buckwheat pasta.
 
 Cooking-loss error improved substantially before any linear correction. The remaining pattern is useful: `1.0%` alginate is still overpredicted, while `1.5%` alginate is often underpredicted because the gelation term is probably too strong at high alginate.
 
-The fitted correction is now essentially identity, which is a better diagnostic sign than the previous Lux-only correction. It still does not constitute production calibration because there are only three papers and two of them contribute just five records each.
+The fitted correction is now essentially identity, which is a better diagnostic sign than the previous Lux-only correction. It still does not constitute production calibration because there are only five papers and two of them contribute approximate/low-count instant-extruded records.
 
 ## Model Implications
 
-The current pasta model is more useful for screening both calcium-crosslinked alginate fresh pasta and dried-extruded rice pasta than the previous proxy. The strongest next improvement is broader cross-paper validation, not more coefficient tuning on these three sources.
+The current pasta model is more useful for screening calcium-crosslinked alginate fresh pasta, dried-extruded rice pasta, and instant extrusion-cooked rice/rice-buckwheat pasta than the previous proxy. The strongest next improvement is broader cross-paper validation, not more coefficient tuning on these sources.
 
 ## Next Calibration Steps
 
@@ -180,10 +195,11 @@ The current pasta model is more useful for screening both calcium-crosslinked al
 
 ## Limitations
 
-- Dataset currently contains cooking-loss rows from three papers.
+- Dataset currently contains cooking-loss rows from five papers.
 - Lux repeated rows share the same ingredient formulas, so the dataset is not independent in the statistical sense.
 - Liu water absorption uses a different published equation and is converted to net uptake for simulator comparison.
 - Detchewa water adsorption index is retained but excluded from current water-absorption metric summaries due to scale mismatch.
+- Bouasla 2021 values are approximate figure-surface readings because the paper does not publish raw run values for the selected optimum.
 - Ingredient mapping is direct for current records, but ingredient composition values remain approximate.
 - Linear correction is diagnostic only.
-- A robust train/test split is still limited with only three papers.
+- A robust train/test split is still limited with five papers and uneven source sizes.

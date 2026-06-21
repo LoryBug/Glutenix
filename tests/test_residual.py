@@ -47,11 +47,11 @@ class TestResidualDataset:
         session = _seeded_session()
         try:
             ds = build_pasta_dataset(session)
-            assert ds["n_records"] == 40
+            assert ds["n_records"] == 42
             assert "cooking_loss_pct" in ds["dataset"]
             loss_data = ds["dataset"]["cooking_loss_pct"]
-            assert loss_data["X"].shape[0] == 40
-            assert loss_data["y_true"].shape[0] == 40
+            assert loss_data["X"].shape[0] == 42
+            assert loss_data["y_true"].shape[0] == 42
         finally:
             session.close()
 
@@ -110,9 +110,9 @@ class TestBenchmarkPasta:
             assert len(results) == 1
             result = results[0]
             assert result.metric == "cooking_loss_pct"
-            assert result.n_records == 40
-            assert result.n_sources == 3
-            assert len(result.source_folds) == 3
+            assert result.n_records == 42
+            assert result.n_sources == 5
+            assert len(result.source_folds) == 5
         finally:
             session.close()
 
