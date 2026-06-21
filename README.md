@@ -197,6 +197,14 @@ uv run glutenix candidates protocol 61 --batch-g 500 --markdown tmp/candidate-61
 
 The protocol scales ingredient grams, lists saved process assumptions, and provides measurement fields that can later be compared against predictions. It is a controlled starting hypothesis, not a validated lab method.
 
+To inspect evidence and literature coverage gaps before testing:
+
+```bash
+uv run glutenix coverage gaps --application Pane --candidate-id 61 --json tmp/candidate-61-coverage.json
+```
+
+Coverage gaps separate structured literature support from missing metrics, weak ranges, mechanism-OOD warnings, and heuristic calibration limits.
+
 To summarize saved candidates and extract robust formulation ranges:
 
 ```bash

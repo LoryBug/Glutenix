@@ -35,6 +35,7 @@ from glutenix.api.routers.internal import (
     run_sensitivity_analysis,
 )
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
+from glutenix.analysis.coverage_gaps import coverage_gaps_report
 from glutenix.analysis.flavor import explain_flavor
 from glutenix.analysis.report import candidate_dossier_markdown, candidate_protocol_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
@@ -1011,6 +1012,28 @@ def _candidate_protocol_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _coverage_gaps_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        try:
+            result = coverage_gaps_report(
+                session,
+                application=args.application,
+                candidate_id=args.candidate_id,
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        _print_coverage_gaps(result)
+        if args.json:
+            path = Path(args.json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"JSON written to {args.json}")
+    finally:
+        session.close()
+    return 0
+
+
 def _cohort_analyze_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1201,6 +1224,41 @@ def _print_flavor_explanation(result: dict[str, Any]) -> None:
         print(f"{row['ingredient']:<32} {row['proportion']:<10.4f} {dominant:<22} {row['effect']} | {row['risk']}")
 
 
+def _print_coverage_gaps(result: dict[str, Any]) -> None:
+    print(f"application={result['application']} domain={result['domain'] or '-'} status={result['status']}")
+    summary = result.get("summary") or {}
+    if summary:
+        print(
+            f"records={summary['record_count']} sources={summary['source_count']} "
+            f"ingredients={len(summary['covered_ingredients'])}"
+        )
+        print(f"measured_metrics={', '.join(summary['measured_metrics'])}")
+    gaps = result.get("metric_gaps") or []
+    print(f"metric_gaps={', '.join(gaps) if gaps else 'none'}")
+    print("\nLimitations")
+    for item in result.get("limitations", []):
+        print(f"- {item}")
+    candidate = result.get("candidate")
+    if candidate:
+        assessment = candidate["assessment"]
+        print("\nCandidate coverage")
+        print(
+            f"candidate_id={candidate['candidate_id']} run_id={candidate['run_id']} "
+            f"level={assessment['level']} score={assessment['score']:.4f}"
+        )
+        print(
+            f"components ingredient={assessment['ingredient_coverage']:.4f} "
+            f"blend={assessment['blend_property_coverage']:.4f} "
+            f"process={assessment['process_coverage']:.4f} "
+            f"mechanism={assessment['mechanism_coverage']:.4f} "
+            f"calibration={assessment['calibration_coverage']:.4f}"
+        )
+        print(f"missing_ingredients={', '.join(candidate['missing_ingredients']) if candidate['missing_ingredients'] else 'none'}")
+        print("risk_flags")
+        for item in candidate["risk_flags"] or ["none"]:
+            print(f"- {item}")
+
+
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
     if "specific_volume_cm3_g" in metrics:
         return f"vol={metrics['specific_volume_cm3_g']:.3f} hard={metrics['crumb_hardness_n']:.2f}"
@@ -1294,6 +1352,14 @@ def build_parser() -> argparse.ArgumentParser:
     candidate_protocol.add_argument("--batch-g", type=float, default=500.0, help="Dry blend batch size in grams.")
     candidate_protocol.add_argument("--markdown", help="Optional Markdown output path. Prints to stdout when omitted.")
     candidate_protocol.set_defaults(func=_candidate_protocol_command)
+
+    coverage = subparsers.add_parser("coverage", help="Inspect literature coverage and evidence gaps.")
+    coverage_subparsers = coverage.add_subparsers(dest="coverage_command", required=True)
+    coverage_gaps = coverage_subparsers.add_parser("gaps", help="Report application or candidate coverage gaps.")
+    coverage_gaps.add_argument("--application", default="Pane", help="Application name, for example Pane.")
+    coverage_gaps.add_argument("--candidate-id", type=int, help="Optional saved candidate id to assess.")
+    coverage_gaps.add_argument("--json", help="Optional JSON output path.")
+    coverage_gaps.set_defaults(func=_coverage_gaps_command)
 
     cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
     cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)
