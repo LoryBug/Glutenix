@@ -36,7 +36,7 @@ from glutenix.api.routers.internal import (
 )
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.analysis.flavor import explain_flavor
-from glutenix.analysis.report import candidate_dossier_markdown
+from glutenix.analysis.report import candidate_dossier_markdown, candidate_protocol_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
 from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
@@ -992,6 +992,25 @@ def _candidate_report_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _candidate_protocol_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        try:
+            markdown = candidate_protocol_markdown(session, args.candidate_id, args.batch_g)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        if args.markdown:
+            path = Path(args.markdown)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(markdown, encoding="utf-8")
+            print(f"Markdown written to {args.markdown}")
+        else:
+            print(markdown)
+    finally:
+        session.close()
+    return 0
+
+
 def _cohort_analyze_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1267,6 +1286,14 @@ def build_parser() -> argparse.ArgumentParser:
     candidate_report.add_argument("candidate_id", type=int)
     candidate_report.add_argument("--markdown", help="Optional Markdown output path. Prints to stdout when omitted.")
     candidate_report.set_defaults(func=_candidate_report_command)
+    candidate_protocol = candidates_subparsers.add_parser(
+        "protocol",
+        help="Generate a Markdown physical-test protocol for a saved candidate.",
+    )
+    candidate_protocol.add_argument("candidate_id", type=int)
+    candidate_protocol.add_argument("--batch-g", type=float, default=500.0, help="Dry blend batch size in grams.")
+    candidate_protocol.add_argument("--markdown", help="Optional Markdown output path. Prints to stdout when omitted.")
+    candidate_protocol.set_defaults(func=_candidate_protocol_command)
 
     cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
     cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)

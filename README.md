@@ -189,6 +189,14 @@ uv run glutenix candidates report 61 --markdown tmp/candidate-61-report.md
 
 The dossier consolidates formula percentages, saved run context, predicted metrics, confidence/evidence notes, risk flags, flavor interpretation, and a physical-test recommendation. It is a decision artifact, not experimental validation.
 
+To translate a candidate into a physical-test protocol:
+
+```bash
+uv run glutenix candidates protocol 61 --batch-g 500 --markdown tmp/candidate-61-protocol.md
+```
+
+The protocol scales ingredient grams, lists saved process assumptions, and provides measurement fields that can later be compared against predictions. It is a controlled starting hypothesis, not a validated lab method.
+
 To summarize saved candidates and extract robust formulation ranges:
 
 ```bash
