@@ -197,6 +197,18 @@ uv run glutenix candidates protocol 61 --batch-g 500 --markdown tmp/candidate-61
 
 The protocol scales ingredient grams, lists saved process assumptions, and provides measurement fields that can later be compared against predictions. It is a controlled starting hypothesis, not a validated lab method.
 
+To bundle pre-lab artifacts for one or more saved candidates:
+
+```bash
+uv run glutenix lab package \
+  --candidate-id 61 \
+  --candidate-id 131 \
+  --output-dir tmp/lab-package \
+  --batch-g 500
+```
+
+The package writes an `index.md`, candidate dossiers, physical-test protocols, and ready-to-edit `experiments record` command templates. It does not write experiment results or validate the recipe.
+
 To inspect evidence and literature coverage gaps before testing:
 
 ```bash

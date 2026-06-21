@@ -34,6 +34,7 @@ from glutenix.api.routers.internal import (
     SensitivityRequest,
     run_sensitivity_analysis,
 )
+from glutenix.applications.workflow import expected_metrics_for_application
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.analysis.coverage_gaps import coverage_gaps_report
 from glutenix.analysis.feedback import candidate_feedback, experimental_feedback_summary
@@ -1143,6 +1144,71 @@ def _candidate_feedback_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _lab_package_command(args: argparse.Namespace) -> int:
+    if args.batch_g <= 0:
+        raise SystemExit("batch_g must be positive")
+    candidate_ids = list(dict.fromkeys(args.candidate_id))
+    session = _persistent_session()
+    try:
+        candidates = []
+        for candidate_id in candidate_ids:
+            candidate = session.get(SimulationCandidate, candidate_id)
+            if candidate is None:
+                raise SystemExit(f"Simulation candidate not found: {candidate_id}")
+            candidates.append(candidate)
+
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        index_lines = [
+            "# Glutenix Lab Package",
+            "",
+            f"Batch dry blend target: {args.batch_g:.2f} g",
+            "",
+            "## Candidates",
+            "",
+            "| Candidate | Application | Status | Score | Report | Protocol | Record command |",
+            "| ---: | --- | --- | ---: | --- | --- | --- |",
+        ]
+
+        for candidate in candidates:
+            report_name = f"candidate-{candidate.id}-report.md"
+            protocol_name = f"candidate-{candidate.id}-protocol.md"
+            command_name = f"candidate-{candidate.id}-record-command.md"
+            (output_dir / report_name).write_text(
+                candidate_dossier_markdown(session, candidate.id),
+                encoding="utf-8",
+            )
+            (output_dir / protocol_name).write_text(
+                candidate_protocol_markdown(session, candidate.id, args.batch_g),
+                encoding="utf-8",
+            )
+            (output_dir / command_name).write_text(
+                _candidate_record_command_template(candidate),
+                encoding="utf-8",
+            )
+            index_lines.append(
+                f"| {candidate.id} | {candidate.run.application_name} | {candidate.status} | "
+                f"{candidate.score:.4f} | [{report_name}]({report_name}) | "
+                f"[{protocol_name}]({protocol_name}) | [{command_name}]({command_name}) |"
+            )
+
+        index_lines.extend([
+            "",
+            "## Notes",
+            "",
+            "- This package contains pre-lab hypotheses, not validated recipes.",
+            "- Fill record-command templates only after physical measurements exist.",
+            "- Use `uv run glutenix candidates feedback <id>` after recording results.",
+            "",
+        ])
+        (output_dir / "index.md").write_text("\n".join(index_lines), encoding="utf-8")
+        print(f"Lab package written to {output_dir}")
+        print(f"candidates={len(candidates)} index={output_dir / 'index.md'}")
+    finally:
+        session.close()
+    return 0
+
+
 def _coverage_gaps_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1484,6 +1550,43 @@ def _print_candidate_feedback(result: dict[str, Any]) -> None:
     print(f"\n{result['evidence_note']}")
 
 
+def _candidate_record_command_template(candidate: SimulationCandidate) -> str:
+    metrics = json.loads(candidate.metrics)
+    properties = json.loads(candidate.properties)
+    metric_names = expected_metrics_for_application(candidate.run.application_name)
+    if not metric_names:
+        metric_names = [
+            key
+            for key, value in {**metrics, **properties}.items()
+            if isinstance(value, int | float) and not isinstance(value, bool)
+        ][:4]
+    lines = [
+        f"# Record Command Template: Candidate #{candidate.id}",
+        "",
+        "Replace `VALUE` placeholders after physical testing.",
+        "",
+        "```bash",
+        f"uv run glutenix experiments record --candidate-id {candidate.id} \\",
+    ]
+    for metric in metric_names:
+        lines.append(f"  --metric {metric}:VALUE \\")
+    lines.extend([
+        "  --condition dry_blend_g:VALUE \\",
+        "  --condition water_added_g:VALUE \\",
+        "  --notes \"replace with replicate notes\"",
+        "```",
+        "",
+        "After recording:",
+        "",
+        "```bash",
+        f"uv run glutenix candidates feedback {candidate.id}",
+        f"uv run glutenix feedback summary --application \"{candidate.run.application_name}\"",
+        "```",
+        "",
+    ])
+    return "\n".join(lines)
+
+
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
     if "specific_volume_cm3_g" in metrics:
         return f"vol={metrics['specific_volume_cm3_g']:.3f} hard={metrics['crumb_hardness_n']:.2f}"
@@ -1621,6 +1724,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     experiments_record.add_argument("--notes", help="Optional notes stored in experiment conditions.")
     experiments_record.set_defaults(func=_experiments_record_command)
+
+    lab = subparsers.add_parser("lab", help="Generate local lab-preparation packages.")
+    lab_subparsers = lab.add_subparsers(dest="lab_command", required=True)
+    lab_package = lab_subparsers.add_parser("package", help="Generate dossier, protocol, and recording templates.")
+    lab_package.add_argument("--candidate-id", action="append", type=int, required=True, help="Candidate id. Repeat for multiple candidates.")
+    lab_package.add_argument("--output-dir", required=True, help="Directory where package files are written.")
+    lab_package.add_argument("--batch-g", type=float, default=500.0, help="Dry blend batch size in grams for protocols.")
+    lab_package.set_defaults(func=_lab_package_command)
 
     cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
     cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)

@@ -767,6 +767,72 @@ def test_cli_candidate_feedback_rejects_missing_candidate(db_session, monkeypatc
         main(["candidates", "feedback", "999"])
 
 
+def test_cli_lab_package_writes_candidate_artifacts(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=21,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=21,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate_id = run.candidates[0].id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_dir = tmp_path / "lab-package"
+
+    exit_code = main([
+        "lab",
+        "package",
+        "--candidate-id",
+        str(candidate_id),
+        "--output-dir",
+        str(output_dir),
+        "--batch-g",
+        "500",
+    ])
+
+    assert exit_code == 0
+    index = (output_dir / "index.md").read_text(encoding="utf-8")
+    report = (output_dir / f"candidate-{candidate_id}-report.md").read_text(encoding="utf-8")
+    protocol = (output_dir / f"candidate-{candidate_id}-protocol.md").read_text(encoding="utf-8")
+    record_command = (output_dir / f"candidate-{candidate_id}-record-command.md").read_text(encoding="utf-8")
+    assert f"candidate-{candidate_id}-report.md" in index
+    assert f"# Candidate #{candidate_id} Dossier" in report
+    assert f"# Physical-Test Protocol: Candidate #{candidate_id}" in protocol
+    assert f"uv run glutenix experiments record --candidate-id {candidate_id}" in record_command
+    assert "--metric specific_volume_cm3_g:VALUE" in record_command
+    assert f"uv run glutenix candidates feedback {candidate_id}" in record_command
+
+
+def test_cli_lab_package_rejects_missing_candidate(db_session, monkeypatch, tmp_path):
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_dir = tmp_path / "missing-package"
+
+    with pytest.raises(SystemExit, match="Simulation candidate not found: 999"):
+        main([
+            "lab",
+            "package",
+            "--candidate-id",
+            "999",
+            "--output-dir",
+            str(output_dir),
+        ])
+    assert not output_dir.exists()
+
+
 def test_cli_experiments_record_rejects_missing_candidate(db_session, monkeypatch):
     monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
 
