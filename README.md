@@ -273,6 +273,8 @@ Main endpoints:
 | `GET /simulation-runs/{id}` | Show a saved run with parsed candidates |
 | `PATCH /simulation-candidates/{id}` | Update candidate decision status and notes |
 | `POST /simulation-candidates/{id}/promote-blend` | Convert a simulated candidate into a physical-test blend |
+| `GET /simulation-candidates/{id}/experiments` | List physical tests linked to a simulation candidate |
+| `GET /simulation-candidates/{id}/feedback` | Compare measured experiment metrics against candidate predictions |
 | `POST /experiments/from-candidate` | Store measured results linked back to a candidate/run |
 | `POST /compare/blends` | Compare candidate, saved blend, and custom formulas with process/blend/flavor scoring |
 

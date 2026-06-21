@@ -637,6 +637,65 @@ class TestInternalWorkflow:
         assert payload["conditions"]["simulation_run_id"] == candidate.run_id
         assert payload["metrics"]["specific_volume_cm3_g"] == 2.35
 
+    def test_candidate_feedback_handles_no_experiments(self):
+        candidate = _create_test_candidate()
+
+        resp = client.get(f"/simulation-candidates/{candidate.id}/feedback")
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["experiment_count"] == 0
+        assert payload["comparisons"] == []
+        assert payload["summary"]["status"] == "no_experiments"
+
+    def test_candidate_feedback_compares_measured_metrics(self):
+        candidate = _create_test_candidate()
+        client.post("/experiments/from-candidate", json={
+            "candidate_id": candidate.id,
+            "conditions": {"dry_blend_g": 500},
+            "metrics": {
+                "specific_volume_cm3_g": 2.42,
+                "crumb_hardness_n": 11.5,
+                "flavor_score": 0.86,
+                "operator_notes": "good handling",
+            },
+        })
+
+        resp = client.get(f"/simulation-candidates/{candidate.id}/experiments")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+        assert resp.json()[0]["conditions"]["candidate_id"] == candidate.id
+
+        resp = client.get(f"/simulation-candidates/{candidate.id}/feedback")
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["experiment_count"] == 1
+        compared_metrics = {item["metric"] for item in payload["comparisons"]}
+        assert {"specific_volume_cm3_g", "crumb_hardness_n", "flavor_score"}.issubset(compared_metrics)
+        assert "operator_notes" not in compared_metrics
+        volume = next(item for item in payload["comparisons"] if item["metric"] == "specific_volume_cm3_g")
+        assert volume["predicted"] == 2.2
+        assert volume["measured"] == 2.42
+        assert volume["absolute_delta"] == 0.22
+        assert payload["summary"]["status"] == "compared"
+
+    def test_candidate_feedback_skips_sparse_unmatched_metrics(self):
+        candidate = _create_test_candidate()
+        client.post("/experiments/from-candidate", json={
+            "candidate_id": candidate.id,
+            "conditions": {},
+            "metrics": {"unmatched_metric": 123, "notes": "not comparable"},
+        })
+
+        resp = client.get(f"/simulation-candidates/{candidate.id}/feedback")
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["experiment_count"] == 1
+        assert payload["comparisons"] == []
+        assert payload["summary"]["status"] == "no_comparable_metrics"
+
     def test_compare_blends_accepts_candidates_blends_and_custom_formula(self):
         candidate = _create_test_candidate()
         promoted = client.post(f"/simulation-candidates/{candidate.id}/promote-blend", json={}).json()
