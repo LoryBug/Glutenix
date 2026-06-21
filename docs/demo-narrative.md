@@ -1,6 +1,6 @@
 # Glutenix Demo Narrative
 
-This document is a practical positioning note for demos, README excerpts, portfolio descriptions, and short posts. It should stay concrete: Glutenix is a decision-support workflow for gluten-free formulation, not a finished food product and not a replacement for physical testing.
+This document is a practical positioning note for demos, README excerpts, and portfolio descriptions. It should stay concrete: Glutenix is a decision-support workflow for gluten-free formulation, not a finished food product and not a replacement for physical testing.
 
 ## One-Liner
 
@@ -109,16 +109,6 @@ Best current Pasta fresca V1 candidate.
 - It separates prediction, coverage, protocol generation, experiment recording, and feedback.
 - It can support multiple applications while keeping their metrics separate.
 - It is honest about uncertainty: confidence, coverage, risk flags, and OOD warnings are part of the output.
-
-## Short LinkedIn-Style Draft
-
-I have been building Glutenix, a small open-source system for gluten-free formulation experiments.
-
-The goal is simple: reduce random trial-and-error before physical testing. Glutenix ranks candidate blends for applications like bread and fresh pasta, saves the simulation history, highlights literature coverage gaps, generates lab-ready protocols, and later compares real measurements against predictions.
-
-It is not a recipe generator and it does not replace experiments. The useful part is the workflow: simulate, shortlist, document assumptions, test, and feed results back into a traceable system.
-
-Current status: bread has a complete CLI-first pre-lab loop; fresh pasta has an experimental V1 workflow. Next work is improving literature coverage and validating candidates with physical tests.
 
 ## Portfolio Description
 

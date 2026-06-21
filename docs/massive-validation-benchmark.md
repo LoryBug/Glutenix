@@ -1,5 +1,7 @@
 # Massive Validation Benchmark
 
+Public working note: this is a historical simulation benchmark, not experimental validation and not a generated report with freshness checks yet.
+
 Date: 2026-06-18
 
 Purpose: stress-test the current Glutenix heuristic models across several product applications before deciding which candidates deserve real lab trials.

@@ -1,5 +1,7 @@
 # Literature Triage for Gluten-Free Formulation Data
 
+Public working note: this is a triage shortlist, not a citation registry and not an extraction record. Stable source metadata should move to the source registry planned in #79.
+
 Date: 2026-06-20
 
 This document records the issue #20 research pass for literature sources that could improve Glutenix. It is a triage document, not an extraction record. Candidate papers still need PDF/table verification before adding records to `data/literature/*.jsonl` or seed ingredient parameters.
