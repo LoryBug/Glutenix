@@ -213,6 +213,8 @@ uv run glutenix feedback summary --application Pane --json tmp/pane-feedback-sum
 
 Feedback summaries aggregate measured-vs-predicted numeric metrics by candidate and metric. They are diagnostic only and do not recalibrate heuristic models automatically.
 
+The minimal reusable shape for extending this loop beyond bread is documented in `docs/application-workflow.md`. `Pane` is `operational_v1`; `Pasta fresca` is tracked as the planned next vertical with separate metrics and evidence requirements.
+
 To summarize saved candidates and extract robust formulation ranges:
 
 ```bash

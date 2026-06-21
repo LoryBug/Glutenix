@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from glutenix.applications.workflow import expected_metrics_for_application
 from glutenix.calibration.coverage import (
     LiteratureCoverageSummary,
     assess_literature_coverage,
@@ -12,12 +13,6 @@ from glutenix.calibration.coverage import (
     domain_for_application,
 )
 from glutenix.db.models import SimulationCandidate
-
-
-EXPECTED_METRICS = {
-    "Pane": ["specific_volume_cm3_g", "crumb_hardness_n", "porosity_pct", "protein_pct"],
-    "Pasta fresca": ["cooking_loss_pct", "firmness_index", "water_absorption_pct", "protein_pct"],
-}
 
 
 def coverage_gaps_report(
@@ -33,14 +28,14 @@ def coverage_gaps_report(
             "domain": None,
             "status": "unsupported_application",
             "summary": None,
-            "expected_metrics": EXPECTED_METRICS.get(application, []),
+            "expected_metrics": expected_metrics_for_application(application),
             "metric_gaps": [],
             "limitations": [f"No structured literature coverage is available for application '{application}'."],
             "candidate": None,
         }
 
     summary = build_domain_coverage(db, domain)
-    expected = EXPECTED_METRICS.get(summary.application, EXPECTED_METRICS.get(application, []))
+    expected = expected_metrics_for_application(summary.application) or expected_metrics_for_application(application)
     measured = set(summary.measured_metrics)
     metric_gaps = [metric for metric in expected if metric not in measured]
     report = {
