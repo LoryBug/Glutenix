@@ -235,3 +235,57 @@ def test_cli_cohort_analyze_writes_json(db_session, monkeypatch, tmp_path):
     assert payload["preset_counts"] == {"bobs-inspired": 2}
     assert payload["top_candidates"][0]["run_id"] == run.id
     assert "Sorghum flour" in payload["ingredients"]
+
+
+def test_cli_sensitivity_analyze_writes_json(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=13,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=13,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate_id = run.candidates[0].id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "sensitivity.json"
+
+    exit_code = main([
+        "sensitivity",
+        "analyze",
+        "--application",
+        "Pane",
+        "--candidate-id",
+        str(candidate_id),
+        "--perturb",
+        "Pea protein powder:0.005",
+        "--compensate-with",
+        "Sorghum flour",
+        "--process-samples",
+        "3",
+        "--seed",
+        "13",
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["application"] == "Pane"
+    assert payload["base"]["score"] > 0
+    assert len(payload["variants"]) == 1
+    assert payload["variants"][0]["perturbation"]["ingredient"] == "Pea protein powder"
+    assert "properties.protein_pct" in payload["variants"][0]["deltas"]

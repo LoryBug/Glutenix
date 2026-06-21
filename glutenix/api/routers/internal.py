@@ -227,6 +227,46 @@ class BlendCompareResponse(BaseModel):
     ranking: list[BlendComparisonItemResponse]
 
 
+class SensitivityPerturbationRequest(BaseModel):
+    ingredient: str
+    delta: float
+
+    @model_validator(mode="after")
+    def non_zero_delta(self):
+        if self.delta == 0:
+            raise ValueError("delta must be non-zero")
+        return self
+
+
+class SensitivityRequest(BaseModel):
+    application: str = "Pane"
+    base: CompareItemRequest
+    perturbations: list[SensitivityPerturbationRequest] = Field(min_length=1)
+    compensate_with: str
+    n_process_samples: int = Field(default=40, ge=1, le=500)
+    seed: int | None = None
+    fermentation_temp: ProcessRangeRequest = Field(default_factory=lambda: ProcessRangeRequest(min=20, max=40))
+    fermentation_duration: ProcessRangeRequest = Field(default_factory=lambda: ProcessRangeRequest(min=60, max=240))
+    baking_temp: ProcessRangeRequest = Field(default_factory=lambda: ProcessRangeRequest(min=170, max=240))
+    baking_duration: ProcessRangeRequest = Field(default_factory=lambda: ProcessRangeRequest(min=20, max=50))
+    weights: CompareWeights = Field(default_factory=CompareWeights)
+
+
+class SensitivityVariantResponse(BaseModel):
+    name: str
+    perturbation: dict[str, Any]
+    deltas: dict[str, float]
+    result: dict[str, Any]
+
+
+class SensitivityResponse(BaseModel):
+    application: str
+    target_profile: str
+    flavor_target: str
+    base: dict[str, Any]
+    variants: list[SensitivityVariantResponse]
+
+
 @router.get("/simulation-candidates/cohort", response_model=CohortAnalysisResponse)
 def analyze_simulation_candidate_cohort(
     application: str | None = None,
@@ -397,6 +437,15 @@ def get_candidate_feedback(candidate_id: int, db: Session = Depends(get_db)):
 
 @router.post("/compare/blends", response_model=BlendCompareResponse)
 def compare_blends(body: BlendCompareRequest, db: Session = Depends(get_db)):
+    return run_blend_comparison(db, body)
+
+
+@router.post("/analyze/sensitivity", response_model=SensitivityResponse)
+def analyze_sensitivity(body: SensitivityRequest, db: Session = Depends(get_db)):
+    return run_sensitivity_analysis(db, body)
+
+
+def run_blend_comparison(db: Session, body: BlendCompareRequest) -> BlendCompareResponse:
     application = db.query(Application).filter(Application.name == body.application).first()
     if application is None:
         raise HTTPException(404, detail="Application not found")
@@ -443,6 +492,74 @@ def compare_blends(body: BlendCompareRequest, db: Session = Depends(get_db)):
             )
             for rank, row in enumerate(rows, start=1)
         ],
+    )
+
+
+def run_sensitivity_analysis(db: Session, body: SensitivityRequest) -> SensitivityResponse:
+    application = db.query(Application).filter(Application.name == body.application).first()
+    if application is None:
+        raise HTTPException(404, detail="Application not found")
+
+    profile = get_sweep_target_profile(application.name)
+    flavor_target = get_flavor_target(application.name)
+    process_points = _process_points(_compare_body_from_sensitivity(body))
+    weight_sum = body.weights.process + body.weights.blend + body.weights.flavor
+    weights = {
+        "process": body.weights.process / weight_sum,
+        "blend": body.weights.blend / weight_sum,
+        "flavor": body.weights.flavor / weight_sum,
+    }
+    coverage_domain = domain_for_application(application.name)
+    coverage_summary = build_domain_coverage(db, coverage_domain) if coverage_domain else None
+    base_name, base_source, base_blend_data = _resolve_compare_item(db, body.base)
+    base_blend_data = _normalize_blend_data(base_blend_data)
+    base_row = _score_compare_item(
+        application=application.name,
+        name=base_name,
+        source=base_source,
+        blend_data=base_blend_data,
+        process_points=process_points,
+        profile=profile,
+        flavor_target=flavor_target,
+        coverage_summary=coverage_summary,
+        weights=weights,
+    )
+    base_proportions = {ingredient.name: proportion for ingredient, proportion in base_blend_data}
+    variants = []
+    for perturbation in body.perturbations:
+        variant_proportions = _apply_perturbation(
+            base_proportions,
+            perturbation.ingredient,
+            perturbation.delta,
+            body.compensate_with,
+        )
+        variant_row = _score_compare_item(
+            application=application.name,
+            name=f"{perturbation.ingredient} {perturbation.delta:+.4f}",
+            source={"type": "sensitivity", "id": perturbation.ingredient},
+            blend_data=_blend_data_from_proportions(db, variant_proportions),
+            process_points=process_points,
+            profile=profile,
+            flavor_target=flavor_target,
+            coverage_summary=coverage_summary,
+            weights=weights,
+        )
+        variants.append(SensitivityVariantResponse(
+            name=variant_row["name"],
+            perturbation={
+                "ingredient": perturbation.ingredient,
+                "delta": perturbation.delta,
+                "compensate_with": body.compensate_with,
+            },
+            deltas=_row_deltas(base_row, variant_row),
+            result=variant_row,
+        ))
+    return SensitivityResponse(
+        application=application.name,
+        target_profile=profile.name,
+        flavor_target=flavor_target.name,
+        base=base_row,
+        variants=variants,
     )
 
 
@@ -616,6 +733,20 @@ def _process_points(body: BlendCompareRequest) -> list[dict[str, float]]:
     )
 
 
+def _compare_body_from_sensitivity(body: SensitivityRequest) -> BlendCompareRequest:
+    return BlendCompareRequest(
+        application=body.application,
+        items=[body.base, body.base],
+        n_process_samples=body.n_process_samples,
+        seed=body.seed,
+        fermentation_temp=body.fermentation_temp,
+        fermentation_duration=body.fermentation_duration,
+        baking_temp=body.baking_temp,
+        baking_duration=body.baking_duration,
+        weights=body.weights,
+    )
+
+
 def _resolve_compare_item(
     db: Session,
     item: CompareItemRequest,
@@ -664,6 +795,42 @@ def _normalize_blend_data(blend_data: list[tuple[Ingredient, float]]) -> list[tu
     if abs(total - 1.0) > 1e-3:
         raise HTTPException(400, detail=f"Blend proportions must sum to 1.0, got {total}")
     return [(ingredient, proportion / total) for ingredient, proportion in blend_data]
+
+
+def _apply_perturbation(
+    proportions: dict[str, float],
+    ingredient: str,
+    delta: float,
+    compensate_with: str,
+) -> dict[str, float]:
+    if ingredient not in proportions:
+        raise HTTPException(400, detail=f"Perturbation ingredient is not in the base formula: {ingredient}")
+    if compensate_with not in proportions:
+        raise HTTPException(400, detail=f"Compensation ingredient is not in the base formula: {compensate_with}")
+    if ingredient == compensate_with:
+        raise HTTPException(400, detail="Perturbation ingredient and compensate_with must be different")
+    variant = dict(proportions)
+    variant[ingredient] += delta
+    variant[compensate_with] -= delta
+    if variant[ingredient] <= 0:
+        raise HTTPException(400, detail=f"Perturbation makes ingredient non-positive: {ingredient}")
+    if variant[compensate_with] <= 0:
+        raise HTTPException(400, detail=f"Perturbation makes compensation ingredient non-positive: {compensate_with}")
+    return variant
+
+
+def _row_deltas(base: dict[str, Any], variant: dict[str, Any]) -> dict[str, float]:
+    deltas: dict[str, float] = {}
+    for key in ("score", "process_score", "blend_score", "flavor_score"):
+        deltas[key] = round(float(variant[key]) - float(base[key]), 4)
+    for section in ("properties", "bread_metrics", "cooking_metrics"):
+        base_section = base.get(section) or {}
+        variant_section = variant.get(section) or {}
+        for key, base_value in base_section.items():
+            variant_value = variant_section.get(key)
+            if isinstance(base_value, int | float) and isinstance(variant_value, int | float):
+                deltas[f"{section}.{key}"] = round(float(variant_value) - float(base_value), 4)
+    return deltas
 
 
 def _score_compare_item(
