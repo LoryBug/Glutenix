@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 import glutenix.cli as cli_mod
 from glutenix.cli import (
     PRESETS,
@@ -334,3 +336,60 @@ def test_cli_flavor_explain_writes_json(db_session, monkeypatch, tmp_path):
     assert payload["flavor_score"] > 0
     assert payload["contributions"]
     assert payload["interpretation"]
+
+
+def test_cli_candidate_report_writes_markdown(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=15,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=15,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate = mark_candidate(
+        db=db_session,
+        candidate_id=run.candidates[0].id,
+        status="test_next",
+        notes="selected for dossier test",
+    )
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "candidate-report.md"
+
+    exit_code = main([
+        "candidates",
+        "report",
+        str(candidate.id),
+        "--markdown",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    markdown = output_path.read_text(encoding="utf-8")
+    assert f"# Candidate #{candidate.id} Dossier" in markdown
+    assert "## Formula" in markdown
+    assert "## Predicted Metrics" in markdown
+    assert "## Confidence And Evidence Notes" in markdown
+    assert "## Flavor Explanation" in markdown
+    assert "primary physical-test candidate" in markdown
+    assert "Treat all predictions as pre-lab hypotheses" in markdown
+
+
+def test_cli_candidate_report_rejects_missing_candidate(db_session, monkeypatch):
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+
+    with pytest.raises(SystemExit, match="Simulation candidate not found: 999"):
+        main(["candidates", "report", "999"])

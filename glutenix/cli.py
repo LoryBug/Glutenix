@@ -36,6 +36,7 @@ from glutenix.api.routers.internal import (
 )
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.analysis.flavor import explain_flavor
+from glutenix.analysis.report import candidate_dossier_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
 from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
@@ -972,6 +973,25 @@ def _candidate_mark_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _candidate_report_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        try:
+            markdown = candidate_dossier_markdown(session, args.candidate_id)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        if args.markdown:
+            path = Path(args.markdown)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(markdown, encoding="utf-8")
+            print(f"Markdown written to {args.markdown}")
+        else:
+            print(markdown)
+    finally:
+        session.close()
+    return 0
+
+
 def _cohort_analyze_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1243,6 +1263,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     candidate_mark.add_argument("--notes", help="Decision notes for this candidate.")
     candidate_mark.set_defaults(func=_candidate_mark_command)
+    candidate_report = candidates_subparsers.add_parser("report", help="Generate a Markdown dossier for a saved candidate.")
+    candidate_report.add_argument("candidate_id", type=int)
+    candidate_report.add_argument("--markdown", help="Optional Markdown output path. Prints to stdout when omitted.")
+    candidate_report.set_defaults(func=_candidate_report_command)
 
     cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
     cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)
