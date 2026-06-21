@@ -122,5 +122,6 @@ An issue is done when:
 - acceptance criteria are satisfied
 - tests/builds relevant to the change pass
 - docs are updated if behavior, data, evidence, or API contracts changed
+- generated docs are refreshed or checked with `uv run python scripts/validate_doc_counts.py` when literature data or citation metadata changes
 - follow-up work is captured as issues, not left only in chat
 - the PR has had a light bug-focused review
