@@ -26,6 +26,7 @@ from glutenix.api.routers.optimization import (
     SuggestIngredient,
     suggest_for_application,
 )
+from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
 from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
@@ -931,8 +932,70 @@ def _candidate_mark_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cohort_analyze_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        result = analyze_candidate_cohort(session, CohortFilters(
+            application=args.application,
+            preset=args.preset,
+            statuses=tuple(args.status or ()),
+            run_ids=tuple(args.run_id or ()),
+            max_rank=args.max_rank,
+            limit=args.limit,
+        ))
+        _print_cohort_analysis(result)
+        if args.json:
+            path = Path(args.json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"JSON written to {args.json}")
+    finally:
+        session.close()
+    return 0
+
+
 def _format_datetime(value: datetime) -> str:
     return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _print_cohort_analysis(result: dict[str, Any]) -> None:
+    print(
+        f"candidates={result['candidate_count']} runs={result['run_count']} "
+        f"statuses={result['status_counts']} presets={result['preset_counts']}"
+    )
+    print("\nTop candidates")
+    print("candidate_id run_id rank status preset score")
+    for candidate in result["top_candidates"][:10]:
+        print(
+            f"{candidate['candidate_id']:<12} {candidate['run_id']:<6} {candidate['rank']:<4} "
+            f"{candidate['status']:<9} {candidate['preset'] or '-':<17} {candidate['score']:<6.4f}"
+        )
+
+    print("\nIngredient ranges (% dry blend)")
+    print("ingredient count min mean max")
+    for name, summary in result["ingredients"].items():
+        print(
+            f"{name:<38} {summary['count']:<5} {summary['min']:<7.2f} "
+            f"{summary['mean']:<7.2f} {summary['max']:<7.2f}"
+        )
+
+    print("\nKey metric ranges")
+    print("metric count min mean max")
+    for name in (
+        "score",
+        "specific_volume_cm3_g",
+        "crumb_hardness_n",
+        "protein_pct",
+        "viscosity_index",
+        "hydrocolloid_pct",
+        "flavor_score",
+    ):
+        summary = result["metrics"].get(name)
+        if summary:
+            print(
+                f"{name:<24} {summary['count']:<5} {summary['min']:<8.4f} "
+                f"{summary['mean']:<8.4f} {summary['max']:<8.4f}"
+            )
 
 
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
@@ -1016,6 +1079,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     candidate_mark.add_argument("--notes", help="Decision notes for this candidate.")
     candidate_mark.set_defaults(func=_candidate_mark_command)
+
+    cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
+    cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)
+    cohort_analyze = cohort_subparsers.add_parser("analyze", help="Summarize candidate ingredient and metric ranges.")
+    cohort_analyze.add_argument("--application", help="Filter by application name, for example Pane.")
+    cohort_analyze.add_argument("--preset", help="Filter by saved run preset.")
+    cohort_analyze.add_argument(
+        "--status",
+        action="append",
+        choices=["new", "promising", "avoid", "test_next", "tested", "archived"],
+        help="Filter by candidate status. Repeat for multiple statuses.",
+    )
+    cohort_analyze.add_argument("--run-id", action="append", type=int, help="Filter by run id. Repeat for multiple runs.")
+    cohort_analyze.add_argument("--max-rank", type=int, help="Only include candidates with rank <= this value.")
+    cohort_analyze.add_argument("--limit", type=int, help="Limit candidates after sorting by score.")
+    cohort_analyze.add_argument("--json", help="Optional JSON output path.")
+    cohort_analyze.set_defaults(func=_cohort_analyze_command)
 
     return parser
 

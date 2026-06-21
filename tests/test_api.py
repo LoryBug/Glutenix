@@ -605,6 +605,26 @@ class TestInternalWorkflow:
         assert resp.json()["status"] == "test_next"
         assert resp.json()["decision_notes"] == "ready for physical test"
 
+    def test_candidate_cohort_analysis_filters_saved_candidates(self):
+        candidate = _create_test_candidate()
+        client.patch(f"/simulation-candidates/{candidate.id}", json={"status": "test_next"})
+        other = _create_test_candidate()
+        client.patch(f"/simulation-candidates/{other.id}", json={"status": "avoid"})
+
+        resp = client.get("/simulation-candidates/cohort", params={
+            "application": "Pane",
+            "status": "test_next",
+            "max_rank": 1,
+        })
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["candidate_count"] == 1
+        assert payload["status_counts"] == {"test_next": 1}
+        assert payload["ingredients"]["White rice flour"]["mean"] == 54.99
+        assert payload["metrics"]["specific_volume_cm3_g"]["mean"] == 2.2
+        assert payload["top_candidates"][0]["candidate_id"] == candidate.id
+
     def test_promote_candidate_to_blend(self):
         candidate = _create_test_candidate()
 
