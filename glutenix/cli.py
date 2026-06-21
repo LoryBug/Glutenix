@@ -41,7 +41,7 @@ from glutenix.analysis.flavor import explain_flavor
 from glutenix.analysis.report import candidate_dossier_markdown, candidate_protocol_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
-from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
+from glutenix.db.models import Application, Blend, BlendIngredient, ExperimentResult, Ingredient, SimulationCandidate, SimulationRun
 from glutenix.db.seed import _seed_applications, _seed_ingredients
 from glutenix.engine.blend import BlendCalculator, BlendProperties
 from glutenix.engine.bread import BreadQualityParams, BreadQualityResult, BreadQualitySimulator
@@ -395,6 +395,80 @@ def mark_candidate(
     return candidate
 
 
+def record_experiment_from_candidate(
+    *,
+    db: Session,
+    candidate_id: int,
+    metrics: dict[str, Any],
+    conditions: dict[str, Any] | None = None,
+    blend_id: int | None = None,
+    blend_name: str | None = None,
+    notes: str | None = None,
+) -> ExperimentResult:
+    candidate = db.get(SimulationCandidate, candidate_id)
+    if candidate is None:
+        raise ValueError(f"Simulation candidate not found: {candidate_id}")
+    if not metrics:
+        raise ValueError("At least one metric is required")
+
+    if blend_id is not None:
+        blend = db.get(Blend, blend_id)
+        if blend is None:
+            raise ValueError(f"Blend not found: {blend_id}")
+    else:
+        blend = _promote_candidate_to_blend_for_cli(db, candidate, blend_name)
+
+    experiment_conditions = {
+        "candidate_id": candidate.id,
+        "simulation_run_id": candidate.run_id,
+        **(conditions or {}),
+    }
+    if notes:
+        experiment_conditions["notes"] = notes
+    experiment = ExperimentResult(
+        blend_id=blend.id,
+        application_id=candidate.run.application_id,
+        conditions=json.dumps(experiment_conditions, sort_keys=True),
+        metrics=json.dumps(metrics, sort_keys=True),
+    )
+    db.add(experiment)
+    db.commit()
+    db.refresh(experiment)
+    return experiment
+
+
+def _promote_candidate_to_blend_for_cli(
+    db: Session,
+    candidate: SimulationCandidate,
+    name: str | None,
+) -> Blend:
+    blend_name = name or f"Physical test candidate {candidate.id}"
+    existing = db.query(Blend).filter(Blend.name == blend_name).first()
+    if existing is not None:
+        if name is not None:
+            raise ValueError("Blend name already exists")
+        return existing
+    blend = Blend(
+        name=blend_name,
+        description=f"Created from simulation candidate #{candidate.id}",
+        application_id=candidate.run.application_id,
+    )
+    db.add(blend)
+    db.flush()
+    ingredients = {ingredient.name: ingredient for ingredient in db.query(Ingredient).all()}
+    for ingredient_name, proportion in json.loads(candidate.proportions).items():
+        ingredient = ingredients.get(ingredient_name)
+        if ingredient is None:
+            raise ValueError(f"Ingredient not found while promoting candidate: {ingredient_name}")
+        db.add(BlendIngredient(
+            blend_id=blend.id,
+            ingredient_id=ingredient.id,
+            proportion=proportion,
+        ))
+    db.flush()
+    return blend
+
+
 def _rank_pane_candidates(
     *,
     session: Session,
@@ -596,6 +670,31 @@ def _parse_named_proportion(value: str) -> tuple[str, float]:
     if proportion <= 0 or proportion > 1:
         raise argparse.ArgumentTypeError("ingredient proportion must satisfy 0 < proportion <= 1")
     return name.strip(), proportion
+
+
+def _parse_named_value(value: str) -> tuple[str, Any]:
+    try:
+        name, raw_value = value.rsplit(":", 1)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "values must use 'name:value', for example 'specific_volume_cm3_g:2.35'"
+        ) from exc
+    if not name.strip():
+        raise argparse.ArgumentTypeError("name cannot be empty")
+    return name.strip(), _parse_scalar_value(raw_value.strip())
+
+
+def _parse_scalar_value(value: str) -> Any:
+    if value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return value
 
 
 def _parse_perturbation(value: str) -> SensitivityPerturbationRequest:
@@ -1063,6 +1162,36 @@ def _feedback_summary_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _experiments_record_command(args: argparse.Namespace) -> int:
+    metrics = dict(args.metric or [])
+    conditions = dict(args.condition or [])
+    session = _persistent_session()
+    try:
+        try:
+            experiment = record_experiment_from_candidate(
+                db=session,
+                candidate_id=args.candidate_id,
+                metrics=metrics,
+                conditions=conditions,
+                blend_id=args.blend_id,
+                blend_name=args.blend_name,
+                notes=args.notes,
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        experiment_conditions = json.loads(experiment.conditions or "{}")
+        experiment_metrics = json.loads(experiment.metrics)
+        print(
+            f"Experiment #{experiment.id} recorded for candidate #{args.candidate_id} "
+            f"blend #{experiment.blend_id} metrics={len(experiment_metrics)}"
+        )
+        print(f"conditions={experiment_conditions}")
+        print(f"metrics={experiment_metrics}")
+    finally:
+        session.close()
+    return 0
+
+
 def _cohort_analyze_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1428,6 +1557,28 @@ def build_parser() -> argparse.ArgumentParser:
     feedback_summary.add_argument("--application", help="Filter by application name, for example Pane.")
     feedback_summary.add_argument("--json", help="Optional JSON output path.")
     feedback_summary.set_defaults(func=_feedback_summary_command)
+
+    experiments = subparsers.add_parser("experiments", help="Record and inspect physical experiment results.")
+    experiments_subparsers = experiments.add_subparsers(dest="experiments_command", required=True)
+    experiments_record = experiments_subparsers.add_parser("record", help="Record measured results from a saved candidate.")
+    experiments_record.add_argument("--candidate-id", type=int, required=True, help="Saved simulation candidate id.")
+    experiments_record.add_argument("--blend-id", type=int, help="Optional existing blend id to attach the experiment to.")
+    experiments_record.add_argument("--blend-name", help="Optional blend name when promoting the candidate.")
+    experiments_record.add_argument(
+        "--metric",
+        action="append",
+        type=_parse_named_value,
+        required=True,
+        help="Measured metric as 'name:value'. Repeat for multiple metrics.",
+    )
+    experiments_record.add_argument(
+        "--condition",
+        action="append",
+        type=_parse_named_value,
+        help="Experiment condition as 'name:value'. Repeat for multiple conditions.",
+    )
+    experiments_record.add_argument("--notes", help="Optional notes stored in experiment conditions.")
+    experiments_record.set_defaults(func=_experiments_record_command)
 
     cohort = subparsers.add_parser("cohort", help="Analyze saved simulation candidate cohorts.")
     cohort_subparsers = cohort.add_subparsers(dest="cohort_command", required=True)
