@@ -22,6 +22,7 @@ The local `private/` directory is intentionally ignored by Git. If private mater
 | `docs/bread-baking-calibration-report.md` | Generated | Keep public; future automation should own derived tables and counts. |
 | `docs/demo-narrative.md` | Public | Keep as demo guidance after removing personal/social draft content. |
 | `docs/development-workflow.md` | Public | Keep as contributor workflow documentation. |
+| `docs/digital-campaigns.md` | Public | Keep as campaign-spec and reproducibility documentation. |
 | `docs/evidence-map.md` | Public | Keep as evidence summary; later derive counts/citation lists from source metadata. |
 | `docs/flavor-heuristic-model.md` | Public | Keep as model-limitation documentation. |
 | `docs/generated/bibliography.md` | Generated | Keep public; regenerate from `data/literature/sources.json`. |
@@ -40,6 +41,9 @@ The local `private/` directory is intentionally ignored by Git. If private mater
 | `docs/target-profile-calibration.md` | Public | Keep as target calibration design documentation. |
 | `docs/adr/README.md` | Public | Keep as ADR index. |
 | `docs/adr/0000-template.md` | Public | Keep as ADR template. |
+| `docs/campaigns/bread-2026-06-21.md` | Public | Keep as reproducible digital screening report, not experimental validation. |
+| `docs/campaigns/pasta-2026-06-21.md` | Public | Keep as reproducible digital screening report, not experimental validation. |
+| `docs/campaigns/pizza-2026-06-21.md` | Public | Keep as reproducible Pizza V1 screening report, not experimental validation. |
 
 ## Private Candidates Removed From Public Docs
 
