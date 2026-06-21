@@ -205,13 +205,24 @@ uv run glutenix coverage gaps --application Pane --candidate-id 61 --json tmp/ca
 
 Coverage gaps separate structured literature support from missing metrics, weak ranges, mechanism-OOD warnings, and heuristic calibration limits.
 
-After physical results are linked back to candidates, summarize prediction error across experiments:
+After physical tests, record measured results against the candidate:
+
+```bash
+uv run glutenix experiments record --candidate-id 61 \
+  --metric specific_volume_cm3_g:2.35 \
+  --metric crumb_hardness_n:11.2 \
+  --condition dry_blend_g:500 \
+  --condition water_added_g:700 \
+  --notes "first bake replicate"
+```
+
+Then summarize prediction error across experiments:
 
 ```bash
 uv run glutenix feedback summary --application Pane --json tmp/pane-feedback-summary.json
 ```
 
-Feedback summaries aggregate measured-vs-predicted numeric metrics by candidate and metric. They are diagnostic only and do not recalibrate heuristic models automatically.
+Experiment recording and feedback summaries are diagnostic only and do not recalibrate heuristic models automatically.
 
 The minimal reusable shape for extending this loop beyond bread is documented in `docs/application-workflow.md`. `Pane` is `operational_v1`; `Pasta fresca` is `experimental_v1` with separate metrics and evidence requirements.
 

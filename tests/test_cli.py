@@ -631,3 +631,89 @@ def test_cli_feedback_summary_handles_empty_data(db_session, monkeypatch, tmp_pa
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert payload["status"] == "no_experiments"
     assert payload["metrics"] == []
+
+
+def test_cli_experiments_record_links_candidate_feedback(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=19,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=19,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate = run.candidates[0]
+    candidate_id = candidate.id
+    run_id = run.id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+
+    exit_code = main([
+        "experiments",
+        "record",
+        "--candidate-id",
+        str(candidate_id),
+        "--metric",
+        "specific_volume_cm3_g:2.45",
+        "--metric",
+        "crumb_hardness_n:11.2",
+        "--condition",
+        "dry_blend_g:500",
+        "--condition",
+        "operator:lab-a",
+        "--notes",
+        "first CLI record",
+    ])
+
+    assert exit_code == 0
+    experiment = db_session.query(ExperimentResult).one()
+    conditions = json.loads(experiment.conditions)
+    metrics = json.loads(experiment.metrics)
+    assert conditions["candidate_id"] == candidate_id
+    assert conditions["simulation_run_id"] == run_id
+    assert conditions["dry_blend_g"] == 500
+    assert conditions["operator"] == "lab-a"
+    assert conditions["notes"] == "first CLI record"
+    assert metrics["specific_volume_cm3_g"] == 2.45
+
+    output_path = tmp_path / "feedback-after-record.json"
+    exit_code = main([
+        "feedback",
+        "summary",
+        "--application",
+        "Pane",
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "compared"
+    assert payload["linked_experiment_count"] == 1
+    assert payload["comparison_count"] == 2
+
+
+def test_cli_experiments_record_rejects_missing_candidate(db_session, monkeypatch):
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+
+    with pytest.raises(SystemExit, match="Simulation candidate not found: 999"):
+        main([
+            "experiments",
+            "record",
+            "--candidate-id",
+            "999",
+            "--metric",
+            "specific_volume_cm3_g:2.45",
+        ])
