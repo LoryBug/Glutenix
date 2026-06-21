@@ -257,6 +257,15 @@ uv run glutenix rank-application --application Pizza --preset pizza-v1 --blend-s
 
 See `docs/pizza-v1-workflow.md` and `docs/pizza-v1-literature-audit.md` for Pizza V1 assumptions and limits. Pizza V1 is not calibrated; it is a literature-bound digital screening workflow.
 
+To reproduce systematic digital screening campaigns for bread, pasta, and Pizza V1:
+
+```bash
+uv run python scripts/run_digital_campaigns.py --date 2026-06-21
+uv run python scripts/run_digital_campaigns.py --date 2026-06-21 --check
+```
+
+Campaign specs are documented in `docs/digital-campaigns.md`. Current campaign reports are in `docs/campaigns/bread-2026-06-21.md`, `docs/campaigns/pasta-2026-06-21.md`, and `docs/campaigns/pizza-2026-06-21.md`. They summarize formulation families, risk patterns, and coverage diagnostics; they are not experimental validation or recipe instructions.
+
 To summarize saved candidates and extract robust formulation ranges:
 
 ```bash
