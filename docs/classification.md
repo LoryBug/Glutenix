@@ -35,6 +35,7 @@ The local `private/` directory is intentionally ignored by Git. If private mater
 | `docs/pasta-cooking-calibration-report.md` | Generated | Keep public; future automation should own derived tables and counts. |
 | `docs/pasta-v1-workflow.md` | Public | Keep as application workflow documentation. |
 | `docs/pizza-v1-literature-audit.md` | Public | Keep as conservative Pizza V1 evidence-boundary documentation. |
+| `docs/pizza-v1-workflow.md` | Public | Keep as Pizza V1 usage and interpretation documentation. |
 | `docs/review-cleanup-audit.md` | Working note | Keep as historical audit only until remaining useful items are issue-tracked or retired. |
 | `docs/target-profile-calibration.md` | Public | Keep as target calibration design documentation. |
 | `docs/adr/README.md` | Public | Keep as ADR index. |

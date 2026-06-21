@@ -13,6 +13,7 @@ from glutenix.calibration.coverage import (
     build_domain_coverage,
     domain_for_application,
 )
+from glutenix.calibration.pizza_v1 import assess_pizza_v1_coverage, is_pizza_v1_application
 from glutenix.db.models import Application, Ingredient
 from glutenix.engine.baking import BakingParams, BakingSimulator
 from glutenix.engine.blend import BlendCalculator
@@ -193,6 +194,7 @@ class ApplicationBlendCandidate(BaseModel):
     cooking_metrics: dict[str, Any] | None = None
     bread_metrics: dict[str, Any] | None = None
     model_confidence: CandidateConfidenceResponse
+    coverage_diagnostics: dict[str, Any] | None = None
     volume_increase_pct: float
     core_temp_c: float
     crust_temp_c: float
@@ -202,6 +204,7 @@ class ApplicationSuggestResponse(BaseModel):
     application: str
     target_profile: str
     flavor_target: str
+    preset_metadata: dict[str, Any] | None = None
     candidates: list[ApplicationBlendCandidate]
 
 
@@ -442,6 +445,16 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             process_values=process_data,
             summary=literature_coverage_summary,
         ).as_dict()
+        coverage_diagnostics = None
+        if is_pizza_v1_application(application.name):
+            pizza_diagnostics = assess_pizza_v1_coverage(
+                ingredient_names=ingredient_names,
+                blend_values=blend_values,
+                process_values=process_data,
+            )
+            coverage_diagnostics = pizza_diagnostics.as_dict()
+            literature_coverage = pizza_diagnostics.as_literature_coverage()
+            total_score *= pizza_diagnostics.coverage_fraction
         model_confidence = serialize_candidate_confidence(assess_candidate_confidence(
             blend_values=blend_values,
             profile=profile,
@@ -468,6 +481,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
             cooking_metrics,
             bread_metrics,
             model_confidence,
+            coverage_diagnostics,
         ))
 
     candidates.sort(key=lambda c: c[0], reverse=True)
@@ -476,6 +490,11 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
         application=application.name,
         target_profile=profile.name,
         flavor_target=flavor_target.name,
+        preset_metadata={
+            "preset": "pizza-v1-compatible",
+            "audit_doc": "docs/pizza-v1-literature-audit.md",
+            "evidence_level": "literature_informed_boundaries_only",
+        } if is_pizza_v1_application(application.name) else None,
         candidates=[
             ApplicationBlendCandidate(
                 rank=rank,
@@ -493,6 +512,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 cooking_metrics=cooking_metrics,
                 bread_metrics=bread_metrics,
                 model_confidence=model_confidence,
+                coverage_diagnostics=coverage_diagnostics,
                 volume_increase_pct=volume_pct,
                 core_temp_c=core_temp,
                 crust_temp_c=crust_temp,
@@ -512,6 +532,7 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
                 cooking_metrics,
                 bread_metrics,
                 model_confidence,
+                coverage_diagnostics,
             )
             in enumerate(candidates[:body.n_candidates], start=1)
         ],

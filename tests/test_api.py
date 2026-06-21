@@ -456,6 +456,10 @@ class TestOptimizeSuggest:
         }
         assert candidate["model_confidence"]["risk_warnings"]
         assert any("Literature coverage/OOD" in item for item in candidate["model_confidence"]["basis"])
+        assert candidate["coverage_diagnostics"] is not None
+        assert candidate["coverage_diagnostics"]["preset"] == "pizza-v1"
+        assert "coverage_fraction" in candidate["coverage_diagnostics"]
+        assert data["preset_metadata"]["audit_doc"] == "docs/pizza-v1-literature-audit.md"
 
     def test_flavor_targets(self):
         resp = client.get("/optimize/flavor-targets")

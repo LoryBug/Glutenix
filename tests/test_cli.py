@@ -3,8 +3,11 @@ import json
 import pytest
 
 import glutenix.cli as cli_mod
+from glutenix.analysis.coverage_gaps import coverage_gaps_report
 from glutenix.cli import (
     APPLICATION_PRESETS,
+    APPLICATION_PRESET_METADATA,
+    APPLICATION_PRESET_PROCESS_BOUNDS,
     PRESETS,
     list_saved_runs,
     main,
@@ -128,6 +131,65 @@ def test_rank_application_candidates_supports_pasta_v1(db_session):
     }
 
 
+def test_rank_application_candidates_supports_pizza_v1(db_session):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+
+    result = rank_application_candidates(
+        application="Pizza",
+        bounds=APPLICATION_PRESETS["pizza-v1"],
+        n_blend_samples=10,
+        n_process_samples=5,
+        top=2,
+        seed=44,
+        process_bounds=APPLICATION_PRESET_PROCESS_BOUNDS["pizza-v1"],
+        db=db_session,
+    )
+
+    assert result.application == "Pizza"
+    assert result.preset_metadata is not None
+    assert result.preset_metadata["audit_doc"] == "docs/pizza-v1-literature-audit.md"
+    assert len(result.candidates) == 2
+    assert result.candidates[0].coverage_diagnostics is not None
+    assert result.candidates[0].coverage_diagnostics["preset"] == "pizza-v1"
+    assert 0 <= result.candidates[0].coverage_diagnostics["coverage_fraction"] <= 1
+
+
+def test_pizza_v1_coverage_gaps_for_saved_candidate(db_session):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+
+    result = rank_application_candidates(
+        application="Pizza",
+        bounds=APPLICATION_PRESETS["pizza-v1"],
+        n_blend_samples=10,
+        n_process_samples=5,
+        top=1,
+        seed=45,
+        process_bounds=APPLICATION_PRESET_PROCESS_BOUNDS["pizza-v1"],
+        db=db_session,
+    )
+    run = save_application_run(
+        db=db_session,
+        result=result,
+        preset="pizza-v1",
+        seed=45,
+        n_blend_samples=10,
+        n_process_samples=5,
+        top=1,
+        process_bounds=APPLICATION_PRESET_PROCESS_BOUNDS["pizza-v1"],
+        git_commit="testcommit",
+    )
+
+    report = coverage_gaps_report(db_session, application="Pizza", candidate_id=run.candidates[0].id)
+
+    assert report["domain"] == "pizza_v1_audit"
+    assert report["coverage_diagnostics"]["preset"] == "pizza-v1"
+    assert report["candidate"]["assessment"]["calibration_coverage"] == 0.0
+
+
 def test_cli_rank_application_writes_json(tmp_path):
     output_path = tmp_path / "application-ranking.json"
 
@@ -188,9 +250,29 @@ def test_cli_rank_application_writes_pasta_json(tmp_path):
     assert payload["candidates"][0]["bread_metrics"] is None
 
 
+def test_cli_pizza_v1_preset_requires_pizza_application():
+    exit_code = main([
+        "rank-application",
+        "--application",
+        "Pane",
+        "--preset",
+        "pizza-v1",
+        "--blend-samples",
+        "10",
+        "--process-samples",
+        "5",
+        "--top",
+        "1",
+    ])
+
+    assert exit_code == 2
+
+
 def test_pane_presets_reference_seeded_ingredient_names():
     assert {"sorghum-baseline", "bobs-inspired", "schaer-inspired"}.issubset(PRESETS)
     assert "pasta-rice-structure-v1" in APPLICATION_PRESETS
+    assert "pizza-v1" in APPLICATION_PRESETS
+    assert APPLICATION_PRESET_METADATA["pizza-v1"]["audit_doc"] == "docs/pizza-v1-literature-audit.md"
     assert "pasta-rice-structure-v1" not in PRESETS
 
 
