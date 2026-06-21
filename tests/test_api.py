@@ -448,6 +448,13 @@ class TestOptimizeSuggest:
         assert candidate["model_confidence"]["level"] in {"low", "medium", "high"}
         assert candidate["model_confidence"]["basis"]
         assert candidate["model_confidence"]["risk_flags"]
+        assert candidate["model_confidence"]["confidence_summary"] in {
+            "calibrated",
+            "literature_informed",
+            "heuristic",
+            "ood_extrapolation",
+        }
+        assert candidate["model_confidence"]["risk_warnings"]
         assert any("Literature coverage/OOD" in item for item in candidate["model_confidence"]["basis"])
 
     def test_flavor_targets(self):
@@ -506,6 +513,8 @@ class TestOptimizeSuggest:
         assert "calibration_confidence" in candidate["cooking_metrics"]
         assert 0 <= candidate["model_confidence"]["score"] <= 1
         assert candidate["model_confidence"]["level"] in {"low", "medium", "high"}
+        assert "confidence_summary" in candidate["model_confidence"]
+        assert "risk_warnings" in candidate["model_confidence"]
 
     def test_application_suggest_pane_uses_bread_quality(self):
         resp = client.post("/optimize/application-suggest", json={
@@ -530,6 +539,8 @@ class TestOptimizeSuggest:
             assert candidate["bread_metrics"]["specific_volume_cm3_g"] > 0
             assert "calibration_score" in candidate["bread_metrics"]
             assert any("Bread quality model" in note for note in candidate["model_confidence"]["basis"])
+            assert "confidence_summary" in candidate["model_confidence"]
+            assert "risk_warnings" in candidate["model_confidence"]
             assert not any("No direct experimental calibration" in flag for flag in candidate["model_confidence"]["risk_flags"])
 
 

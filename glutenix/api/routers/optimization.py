@@ -176,6 +176,8 @@ class CandidateConfidenceResponse(BaseModel):
     level: str
     basis: list[str]
     risk_flags: list[str]
+    confidence_summary: str
+    risk_warnings: list[dict[str, Any]]
 
 
 class ApplicationBlendCandidate(BaseModel):

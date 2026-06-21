@@ -33,6 +33,13 @@ def test_rank_pane_candidates_returns_sorted_candidates():
     assert abs(sum(candidates[0].proportions.values()) - 1.0) <= 0.001
     assert candidates[0].bread_metrics["specific_volume_cm3_g"] > 0
     assert candidates[0].model_confidence["level"] in {"low", "medium", "high"}
+    assert candidates[0].model_confidence["confidence_summary"] in {
+        "calibrated",
+        "literature_informed",
+        "heuristic",
+        "ood_extrapolation",
+    }
+    assert "risk_warnings" in candidates[0].model_confidence
 
 
 def test_cli_rank_pane_writes_json(tmp_path):
@@ -113,6 +120,12 @@ def test_rank_application_candidates_supports_pasta_v1(db_session):
     assert result.candidates[0].process["calcium_lactate_m"] == 0.1
     assert result.candidates[0].process["calcium_bath_time_min"] == 30.0
     assert result.candidates[0].model_confidence.level in {"low", "medium", "high"}
+    assert result.candidates[0].model_confidence.confidence_summary in {
+        "calibrated",
+        "literature_informed",
+        "heuristic",
+        "ood_extrapolation",
+    }
 
 
 def test_cli_rank_application_writes_json(tmp_path):
