@@ -2,12 +2,13 @@ import json
 import math
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from glutenix.api.deps import get_db
+from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.calibration.coverage import (
     assess_literature_coverage,
     build_domain_coverage,
@@ -50,6 +51,18 @@ class CandidateResponse(BaseModel):
     confidence: dict[str, Any]
     risk_flags: list[str]
     decision_notes: str | None
+
+
+class CohortAnalysisResponse(BaseModel):
+    filters: dict[str, Any]
+    candidate_count: int
+    run_count: int
+    status_counts: dict[str, int]
+    preset_counts: dict[str, int]
+    source_counts: dict[str, int]
+    ingredients: dict[str, dict[str, float | int]]
+    metrics: dict[str, dict[str, float | int]]
+    top_candidates: list[dict[str, Any]]
 
 
 class RunSummaryResponse(BaseModel):
@@ -212,6 +225,30 @@ class BlendCompareResponse(BaseModel):
     target_profile: str
     flavor_target: str
     ranking: list[BlendComparisonItemResponse]
+
+
+@router.get("/simulation-candidates/cohort", response_model=CohortAnalysisResponse)
+def analyze_simulation_candidate_cohort(
+    application: str | None = None,
+    preset: str | None = None,
+    status: list[str] | None = Query(default=None),
+    run_id: list[int] | None = Query(default=None),
+    max_rank: int | None = None,
+    limit: int | None = None,
+    db: Session = Depends(get_db),
+):
+    if max_rank is not None and max_rank < 1:
+        raise HTTPException(400, detail="max_rank must be positive")
+    if limit is not None and limit < 1:
+        raise HTTPException(400, detail="limit must be positive")
+    return analyze_candidate_cohort(db, CohortFilters(
+        application=application,
+        preset=preset,
+        statuses=tuple(status or ()),
+        run_ids=tuple(run_id or ()),
+        max_rank=max_rank,
+        limit=limit,
+    ))
 
 
 @router.get("/simulation-runs", response_model=list[RunSummaryResponse])

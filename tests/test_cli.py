@@ -1,5 +1,6 @@
 import json
 
+import glutenix.cli as cli_mod
 from glutenix.cli import (
     PRESETS,
     list_saved_runs,
@@ -187,3 +188,50 @@ def test_save_application_run(db_session):
     assert run.application_name == "Pane"
     assert len(run.candidates) == 2
     assert json.loads(run.candidates[0].metrics)["specific_volume_cm3_g"] > 0
+
+
+def test_cli_cohort_analyze_writes_json(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=2,
+        seed=12,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=12,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=2,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "cohort.json"
+
+    exit_code = main([
+        "cohort",
+        "analyze",
+        "--application",
+        "Pane",
+        "--preset",
+        "bobs-inspired",
+        "--max-rank",
+        "2",
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["candidate_count"] == 2
+    assert payload["run_count"] == 1
+    assert payload["preset_counts"] == {"bobs-inspired": 2}
+    assert payload["top_candidates"][0]["run_id"] == run.id
+    assert "Sorghum flour" in payload["ingredients"]

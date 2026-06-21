@@ -181,6 +181,14 @@ uv run glutenix runs show 1
 uv run glutenix candidates mark 1 --status test_next --notes "best protein/viscosity balance"
 ```
 
+To summarize saved candidates and extract robust formulation ranges:
+
+```bash
+uv run glutenix cohort analyze --application Pane --preset bobs-inspired --max-rank 10
+```
+
+Add `--status test_next`, `--status promising`, `--run-id 13`, or `--json cohort.json` for filtered or machine-readable analysis.
+
 ### Bayesian Optimization And GPR
 
 The project includes Gaussian Process Regression and Bayesian Optimization components so that real experimental results can eventually guide future suggestions.
@@ -269,6 +277,7 @@ Main endpoints:
 | `GET /calibration/bread-baking` | Compare bread simulator against literature records |
 | `GET /calibration/coverage` | Report literature-derived coverage ranges and OOD basis |
 | `POST /experiments` | Store experimental observations |
+| `GET /simulation-candidates/cohort` | Summarize candidate cohorts by ingredient and metric ranges |
 | `GET /simulation-runs` | List saved simulation/optimization campaigns |
 | `GET /simulation-runs/{id}` | Show a saved run with parsed candidates |
 | `PATCH /simulation-candidates/{id}` | Update candidate decision status and notes |
