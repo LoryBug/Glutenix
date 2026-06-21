@@ -48,18 +48,24 @@ Limitations remain explicit: predictions are heuristic, flavor is not sensory-pa
 
 ### Pasta fresca
 
-Status: `planned_v1`.
+Status: `experimental_v1`.
 
-Pasta is the next intended vertical, but it must not reuse bread quality metrics as pasta outcomes.
+Pasta is the second vertical. It has a first ranking path, but it must not reuse bread quality metrics as pasta outcomes and remains pre-lab/heuristic until cooking tests exist.
 
 Primary metrics planned for Pasta v1:
 
 - `cooking_loss_pct`
 - `firmness_index`
-- `water_absorption_pct`
+- `water_uptake_pct`
 - `protein_pct`
 
-Before Pasta ranking is implemented, the next task should document pasta targets, processing assumptions, and confidence limits from literature.
+First ranking command:
+
+```bash
+uv run glutenix rank-application --application "Pasta fresca" --preset pasta-rice-structure-v1
+```
+
+The next scientific step is to save a Pasta fresca campaign, select a candidate, and physically measure cooking loss, firmness, water uptake, protein, and sensory notes.
 
 ## Adding A New Application
 

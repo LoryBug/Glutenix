@@ -213,7 +213,15 @@ uv run glutenix feedback summary --application Pane --json tmp/pane-feedback-sum
 
 Feedback summaries aggregate measured-vs-predicted numeric metrics by candidate and metric. They are diagnostic only and do not recalibrate heuristic models automatically.
 
-The minimal reusable shape for extending this loop beyond bread is documented in `docs/application-workflow.md`. `Pane` is `operational_v1`; `Pasta fresca` is tracked as the planned next vertical with separate metrics and evidence requirements.
+The minimal reusable shape for extending this loop beyond bread is documented in `docs/application-workflow.md`. `Pane` is `operational_v1`; `Pasta fresca` is `experimental_v1` with separate metrics and evidence requirements.
+
+Pasta V1 can be ranked through the application optimizer with a pasta-specific preset:
+
+```bash
+uv run glutenix rank-application --application "Pasta fresca" --preset pasta-rice-structure-v1 --blend-samples 100 --process-samples 20 --top 10 --seed 42
+```
+
+See `docs/pasta-v1-workflow.md` for Pasta metrics, assumptions, and evidence limits.
 
 To summarize saved candidates and extract robust formulation ranges:
 
