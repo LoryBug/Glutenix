@@ -289,3 +289,48 @@ def test_cli_sensitivity_analyze_writes_json(db_session, monkeypatch, tmp_path):
     assert len(payload["variants"]) == 1
     assert payload["variants"][0]["perturbation"]["ingredient"] == "Pea protein powder"
     assert "properties.protein_pct" in payload["variants"][0]["deltas"]
+
+
+def test_cli_flavor_explain_writes_json(db_session, monkeypatch, tmp_path):
+    _seed_ingredients(db_session)
+    _seed_applications(db_session)
+    db_session.commit()
+    candidates = rank_pane_candidates(
+        preset="bobs-inspired",
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        seed=14,
+        db=db_session,
+    )
+    run = save_pane_run(
+        db=db_session,
+        preset="bobs-inspired",
+        seed=14,
+        n_blend_samples=4,
+        n_process_samples=3,
+        top=1,
+        candidates=candidates,
+        git_commit="testcommit",
+    )
+    candidate_id = run.candidates[0].id
+    monkeypatch.setattr(cli_mod, "_persistent_session", lambda: db_session)
+    output_path = tmp_path / "flavor.json"
+
+    exit_code = main([
+        "flavor",
+        "explain",
+        "--application",
+        "Pane",
+        "--candidate-id",
+        str(candidate_id),
+        "--json",
+        str(output_path),
+    ])
+
+    assert exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["target"]["name"] == "Pane"
+    assert payload["flavor_score"] > 0
+    assert payload["contributions"]
+    assert payload["interpretation"]

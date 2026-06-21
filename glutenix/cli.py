@@ -35,6 +35,7 @@ from glutenix.api.routers.internal import (
     run_sensitivity_analysis,
 )
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
+from glutenix.analysis.flavor import explain_flavor
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
 from glutenix.db.models import Application, Ingredient, SimulationCandidate, SimulationRun
@@ -1047,6 +1048,31 @@ def _sensitivity_analyze_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _flavor_explain_command(args: argparse.Namespace) -> int:
+    sources = [args.candidate_id is not None, args.blend_id is not None, bool(args.ingredient)]
+    if sum(sources) != 1:
+        raise SystemExit("Provide exactly one of --candidate-id, --blend-id, or repeated --ingredient.")
+    proportions = dict(args.ingredient or []) or None
+    session = _persistent_session()
+    try:
+        result = explain_flavor(
+            session,
+            application=args.application,
+            candidate_id=args.candidate_id,
+            blend_id=args.blend_id,
+            proportions=proportions,
+        )
+        _print_flavor_explanation(result)
+        if args.json:
+            path = Path(args.json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"JSON written to {args.json}")
+    finally:
+        session.close()
+    return 0
+
+
 def _format_datetime(value: datetime) -> str:
     return value.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1113,6 +1139,27 @@ def _print_sensitivity_analysis(result: dict[str, Any]) -> None:
             f"{deltas.get('bread_metrics.specific_volume_cm3_g', 0):<8.4f} "
             f"{deltas.get('bread_metrics.crumb_hardness_n', 0):<8.4f}"
         )
+
+
+def _print_flavor_explanation(result: dict[str, Any]) -> None:
+    print(
+        f"application={result['application']} target={result['target']['name']} "
+        f"flavor_score={result['flavor_score']:.4f}"
+    )
+    print("\nInterpretation")
+    for item in result["interpretation"]:
+        print(f"- {item}")
+    print("\nFlavor profile vs target")
+    print("dimension profile target gap")
+    for dim, value in result["profile"].items():
+        target = result["target"]["profile"][dim]
+        gap = result["gaps_vs_target"][dim]
+        print(f"{dim:<10} {value:<7.3f} {target:<7.3f} {gap:<+7.3f}")
+    print("\nTop ingredient contributions")
+    print("ingredient proportion dominant effect risk")
+    for row in result["contributions"][:8]:
+        dominant = ",".join(row["dominant_dimensions"])
+        print(f"{row['ingredient']:<32} {row['proportion']:<10.4f} {dominant:<22} {row['effect']} | {row['risk']}")
 
 
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
@@ -1242,6 +1289,21 @@ def build_parser() -> argparse.ArgumentParser:
     _add_process_bound_args(sensitivity_analyze)
     sensitivity_analyze.add_argument("--json", help="Optional JSON output path.")
     sensitivity_analyze.set_defaults(func=_sensitivity_analyze_command)
+
+    flavor = subparsers.add_parser("flavor", help="Explain flavor score and ingredient contributions.")
+    flavor_subparsers = flavor.add_subparsers(dest="flavor_command", required=True)
+    flavor_explain = flavor_subparsers.add_parser("explain", help="Explain a candidate, blend, or custom formula flavor score.")
+    flavor_explain.add_argument("--application", default="Pane", help="Application name, for example Pane.")
+    flavor_explain.add_argument("--candidate-id", type=int, help="Use a saved simulation candidate as the formula.")
+    flavor_explain.add_argument("--blend-id", type=int, help="Use a saved blend as the formula.")
+    flavor_explain.add_argument(
+        "--ingredient",
+        action="append",
+        type=_parse_named_proportion,
+        help="Custom ingredient as 'Ingredient name:proportion'. Repeat for custom formulas.",
+    )
+    flavor_explain.add_argument("--json", help="Optional JSON output path.")
+    flavor_explain.set_defaults(func=_flavor_explain_command)
 
     return parser
 

@@ -200,6 +200,14 @@ uv run glutenix sensitivity analyze --application Pane --candidate-id 61 \
 
 Sensitivity analysis is diagnostic: it compares variant predictions against the base formula without mutating saved candidates or recalibrating the model.
 
+To explain why a formula matches or misses an application flavor target:
+
+```bash
+uv run glutenix flavor explain --application Pane --candidate-id 61
+```
+
+The flavor explanation reports the heuristic flavor profile, target gaps, ingredient contributions, and sensory risk notes. It is not a substitute for tasting or sensory-panel calibration.
+
 ### Bayesian Optimization And GPR
 
 The project includes Gaussian Process Regression and Bayesian Optimization components so that real experimental results can eventually guide future suggestions.
@@ -298,6 +306,7 @@ Main endpoints:
 | `POST /experiments/from-candidate` | Store measured results linked back to a candidate/run |
 | `POST /compare/blends` | Compare candidate, saved blend, and custom formulas with process/blend/flavor scoring |
 | `POST /analyze/sensitivity` | Compare ingredient perturbations against a base formula |
+| `POST /analyze/flavor` | Explain flavor score, target gaps, and ingredient contributions |
 
 Example pasta cooking request:
 
