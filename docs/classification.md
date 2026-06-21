@@ -24,6 +24,7 @@ The local `private/` directory is intentionally ignored by Git. If private mater
 | `docs/development-workflow.md` | Public | Keep as contributor workflow documentation. |
 | `docs/evidence-map.md` | Public | Keep as evidence summary; later derive counts/citation lists from source metadata. |
 | `docs/flavor-heuristic-model.md` | Public | Keep as model-limitation documentation. |
+| `docs/generated/bibliography.md` | Generated | Keep public; regenerate from `data/literature/sources.json`. |
 | `docs/literature-coverage-ood.md` | Public | Keep as coverage/OOD interpretation documentation. |
 | `docs/literature-extraction-template.md` | Public | Keep as extraction template. |
 | `docs/literature-first-validation-roadmap.md` | Public | Keep as validation strategy documentation. |

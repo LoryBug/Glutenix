@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
@@ -15,6 +16,7 @@ from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PASTA_DATASET = PROJECT_ROOT / "data" / "literature" / "pasta_cooking.jsonl"
 DEFAULT_BREAD_DATASET = PROJECT_ROOT / "data" / "literature" / "bread_baking.jsonl"
+DEFAULT_SOURCE_REGISTRY = PROJECT_ROOT / "data" / "literature" / "sources.json"
 VALID_CONFIDENCE_LEVELS = {"low", "medium", "high"}
 ALLOW_NEGATIVE_MEASURED_METRICS = {"water_absorption_pct"}
 
@@ -30,6 +32,7 @@ class LiteratureRecord:
     process: dict[str, Any]
     measured: dict[str, float]
     confidence: str
+    source_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -117,6 +120,8 @@ def validate_literature_record(
         raise ValueError(f"source.title is required{where}")
     if not any(record.source.get(key) for key in ("doi", "pmcid", "url")):
         raise ValueError(f"source must include doi, pmcid, or url{where}")
+    if record.source_id is not None and not record.source_id.strip():
+        raise ValueError(f"source_id must be non-empty when provided{where}")
     if not record.literature_formula:
         raise ValueError(f"literature_formula is required{where}")
     if not record.mapped_formula:
@@ -165,13 +170,90 @@ def validate_literature_dataset(
     )
     metrics = sorted({metric for record in records for metric in record.measured})
     applications = sorted({record.application for record in records})
-    sources = sorted({record.source.get("doi") or record.source.get("pmcid") or record.source.get("url") for record in records})
+    source_keys = {
+        record.source.get("doi") or record.source.get("pmcid") or record.source.get("url")
+        for record in records
+    }
+    sources = sorted(source for source in source_keys if source)
     return {
         "record_count": len(records),
         "applications": applications,
         "metrics": metrics,
         "source_count": len(sources),
         "sources": sources,
+    }
+
+
+def load_literature_sources(path: Path | str = DEFAULT_SOURCE_REGISTRY) -> dict[str, dict[str, Any]]:
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("Literature source registry must be a list")
+
+    sources: dict[str, dict[str, Any]] = {}
+    required_fields = {"id", "domain", "authors", "year", "title", "record_count"}
+    for index, entry in enumerate(raw, start=1):
+        if not isinstance(entry, dict):
+            raise ValueError(f"Literature source entry {index} must be an object")
+        missing = required_fields - entry.keys()
+        if missing:
+            raise ValueError(f"Literature source entry {index} is missing {sorted(missing)}")
+        source_id = str(entry["id"])
+        if not source_id:
+            raise ValueError(f"Literature source entry {index} has empty id")
+        if source_id in sources:
+            raise ValueError(f"Duplicate literature source id: {source_id}")
+        if not isinstance(entry["authors"], list) or not entry["authors"]:
+            raise ValueError(f"Literature source {source_id} must list at least one author label")
+        if not any(entry.get(key) for key in ("doi", "pmcid", "url")):
+            raise ValueError(f"Literature source {source_id} must include doi, pmcid, or url")
+        if int(entry["record_count"]) < 0:
+            raise ValueError(f"Literature source {source_id} has invalid record_count")
+        sources[source_id] = entry
+    return sources
+
+
+def validate_literature_source_references(
+    dataset_paths: tuple[Path | str, ...] = (DEFAULT_PASTA_DATASET, DEFAULT_BREAD_DATASET),
+    sources_path: Path | str = DEFAULT_SOURCE_REGISTRY,
+) -> dict[str, Any]:
+    sources = load_literature_sources(sources_path)
+    counts: Counter[str] = Counter()
+    record_count = 0
+
+    for dataset_path in dataset_paths:
+        path = Path(dataset_path)
+        with path.open("r", encoding="utf-8") as f:
+            for line_no, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                raw = json.loads(line)
+                source_id = raw.get("source_id")
+                if not source_id:
+                    raise ValueError(f"source_id is required in {path} at line {line_no}")
+                if source_id not in sources:
+                    raise ValueError(f"Unknown source_id {source_id!r} in {path} at line {line_no}")
+                source = raw.get("source", {})
+                registry_doi = sources[source_id].get("doi")
+                if source.get("doi") and registry_doi and source["doi"] != registry_doi:
+                    raise ValueError(
+                        f"DOI mismatch for source_id {source_id!r} in {path} at line {line_no}"
+                    )
+                counts[source_id] += 1
+                record_count += 1
+
+    for source_id, source in sources.items():
+        expected = int(source["record_count"])
+        actual = counts[source_id]
+        if actual != expected:
+            raise ValueError(
+                f"record_count mismatch for source_id {source_id!r}: registry={expected}, records={actual}"
+            )
+
+    return {
+        "source_count": len(sources),
+        "record_count": record_count,
+        "counts_by_source_id": dict(sorted(counts.items())),
     }
 
 

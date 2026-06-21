@@ -57,11 +57,13 @@ Structured records:
 
 Current sources:
 
-- Lux et al. 2023, DOI `10.1002/fsn3.3301`, calcium-alginate amaranth pasta.
-- Liu et al. 2026, DOI `10.1016/j.fochx.2025.103403`, extruded rice pasta with KGM and curdlan.
-- Detchewa et al. 2016, DOI `10.1007/s13197-016-2323-8`, extruded rice spaghetti with soy protein isolate.
-- Bouasla & Wojtowicz 2019, DOI `10.3390/foods8100496`, instant extrusion-cooked rice-buckwheat pasta.
-- Bouasla & Wojtowicz 2021, DOI `10.3390/pr9040693`, instant extrusion-cooked rice pasta.
+- `lux_2023`: calcium-alginate amaranth pasta.
+- `liu_2026`: extruded rice pasta with KGM and curdlan.
+- `detchewa_2016`: extruded rice spaghetti with soy protein isolate.
+- `bouasla_2019`: instant extrusion-cooked rice-buckwheat pasta.
+- `bouasla_2021`: instant extrusion-cooked rice pasta.
+
+Full citation metadata is centralized in `data/literature/sources.json` and rendered in `docs/generated/bibliography.md`.
 
 Covered process families:
 
@@ -141,16 +143,18 @@ Structured records:
 
 Current sources:
 
-- Singh and Adedeji 2026, DOI `10.3390/foods15101711`, proso millet cultivar gluten-free breads.
-- Torres-Perez et al. 2026, DOI `10.3390/foods15020338`, additive-removal clean-label gluten-free bread.
-- Loncaric et al. 2026, DOI `10.3390/foods15030412`, rice/whey and rice/chickpea gluten-free bread staling.
-- Parsamajd et al. 2025, DOI `10.1002/fsn3.71107`, HPMC/xanthan/guar hydrocolloid-combination gluten-free breads.
-- Belorio and Gomez 2020, DOI `10.3390/foods9111548`, hydration effects in rice/maize HPMC/psyllium/xanthan breads.
-- Wojcik et al. 2021, DOI `10.1038/s41598-021-93834-0`, pea-protein-enriched buckwheat/flaxseed gluten-free bread.
-- Kahraman et al. 2022, DOI `10.3390/foods11020199`, raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
-- Bianchi et al. 2026, DOI `10.3390/foods15071230`, tapioca starch/red lentil flour mixture design gluten-free bread with guar gum.
-- Ghodosipoor et al. 2025, DOI `10.1002/fsn3.70891`, quinoa flour + HPMC + microbial transglutaminase CCD gluten-free bread optimization.
-- Di Renzo et al. 2024, DOI `10.3390/foods13091382`, quinoa/rice/potato gluten-free bread with HPMC, xanthan, sodium alginate, and kappa carrageenan.
+- `singh_2026`: proso millet cultivar gluten-free breads.
+- `torres_perez_2026`: additive-removal clean-label gluten-free bread.
+- `loncaric_2026`: rice/whey and rice/chickpea gluten-free bread staling.
+- `parsamajd_2025`: HPMC/xanthan/guar hydrocolloid-combination gluten-free breads.
+- `belorio_gomez_2020`: hydration effects in rice/maize HPMC/psyllium/xanthan breads.
+- `wojcik_2021`: pea-protein-enriched buckwheat/flaxseed gluten-free bread.
+- `kahraman_2022`: raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
+- `bianchi_2026`: tapioca starch/red lentil flour mixture design gluten-free bread with guar gum.
+- `ghodosipoor_2025`: quinoa flour + HPMC + microbial transglutaminase CCD gluten-free bread optimization.
+- `di_renzo_2024`: quinoa/rice/potato gluten-free bread with HPMC, xanthan, sodium alginate, and kappa carrageenan.
+
+Full citation metadata is centralized in `data/literature/sources.json` and rendered in `docs/generated/bibliography.md`.
 
 Current limitations:
 
