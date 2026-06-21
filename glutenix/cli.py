@@ -36,7 +36,7 @@ from glutenix.api.routers.internal import (
 )
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.analysis.coverage_gaps import coverage_gaps_report
-from glutenix.analysis.feedback import experimental_feedback_summary
+from glutenix.analysis.feedback import candidate_feedback, experimental_feedback_summary
 from glutenix.analysis.flavor import explain_flavor
 from glutenix.analysis.report import candidate_dossier_markdown, candidate_protocol_markdown
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
@@ -1125,6 +1125,24 @@ def _candidate_protocol_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _candidate_feedback_command(args: argparse.Namespace) -> int:
+    session = _persistent_session()
+    try:
+        try:
+            result = candidate_feedback(session, args.candidate_id)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        _print_candidate_feedback(result)
+        if args.json:
+            path = Path(args.json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"JSON written to {args.json}")
+    finally:
+        session.close()
+    return 0
+
+
 def _coverage_gaps_command(args: argparse.Namespace) -> int:
     session = _persistent_session()
     try:
@@ -1449,6 +1467,23 @@ def _print_feedback_summary(result: dict[str, Any]) -> None:
     print(f"\n{result['evidence_note']}")
 
 
+def _print_candidate_feedback(result: dict[str, Any]) -> None:
+    print(
+        f"candidate_id={result['candidate_id']} run_id={result['run_id']} status={result['status']} "
+        f"experiments={result['experiment_count']} summary={result['summary']['status']}"
+    )
+    print(result["summary"]["message"])
+    print("\nMetric comparisons")
+    print("metric predicted measured delta pct_delta")
+    for row in result["comparisons"]:
+        pct = "-" if row["percent_delta"] is None else f"{row['percent_delta']:.2f}"
+        print(
+            f"{row['metric']:<28} {row['predicted']:<9.4f} {row['measured']:<9.4f} "
+            f"{row['absolute_delta']:<8.4f} {pct}"
+        )
+    print(f"\n{result['evidence_note']}")
+
+
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
     if "specific_volume_cm3_g" in metrics:
         return f"vol={metrics['specific_volume_cm3_g']:.3f} hard={metrics['crumb_hardness_n']:.2f}"
@@ -1542,6 +1577,13 @@ def build_parser() -> argparse.ArgumentParser:
     candidate_protocol.add_argument("--batch-g", type=float, default=500.0, help="Dry blend batch size in grams.")
     candidate_protocol.add_argument("--markdown", help="Optional Markdown output path. Prints to stdout when omitted.")
     candidate_protocol.set_defaults(func=_candidate_protocol_command)
+    candidate_feedback_parser = candidates_subparsers.add_parser(
+        "feedback",
+        help="Show measured-vs-predicted feedback for a saved candidate.",
+    )
+    candidate_feedback_parser.add_argument("candidate_id", type=int)
+    candidate_feedback_parser.add_argument("--json", help="Optional JSON output path.")
+    candidate_feedback_parser.set_defaults(func=_candidate_feedback_command)
 
     coverage = subparsers.add_parser("coverage", help="Inspect literature coverage and evidence gaps.")
     coverage_subparsers = coverage.add_subparsers(dest="coverage_command", required=True)
