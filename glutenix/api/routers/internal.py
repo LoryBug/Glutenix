@@ -108,6 +108,32 @@ class ExperimentFromCandidateResponse(BaseModel):
     created_at: str
 
 
+class CandidateExperimentResponse(BaseModel):
+    id: int
+    blend_id: int
+    candidate_id: int
+    conditions: dict[str, Any]
+    metrics: dict[str, Any]
+    created_at: str
+
+
+class MetricComparisonResponse(BaseModel):
+    metric: str
+    predicted: float
+    measured: float
+    absolute_delta: float
+    percent_delta: float | None
+
+
+class CandidateFeedbackResponse(BaseModel):
+    candidate_id: int
+    run_id: int
+    status: str
+    experiment_count: int
+    comparisons: list[MetricComparisonResponse]
+    summary: dict[str, Any]
+
+
 class ProcessRangeRequest(BaseModel):
     min: float = Field(gt=0)
     max: float = Field(gt=0)
@@ -291,6 +317,47 @@ def create_experiment_from_candidate(
     )
 
 
+@router.get("/simulation-candidates/{candidate_id}/experiments", response_model=list[CandidateExperimentResponse])
+def list_candidate_experiments(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = db.get(SimulationCandidate, candidate_id)
+    if candidate is None:
+        raise HTTPException(404, detail="Simulation candidate not found")
+    return [_candidate_experiment_response(experiment, candidate_id) for experiment in _linked_experiments(db, candidate_id)]
+
+
+@router.get("/simulation-candidates/{candidate_id}/feedback", response_model=CandidateFeedbackResponse)
+def get_candidate_feedback(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = db.get(SimulationCandidate, candidate_id)
+    if candidate is None:
+        raise HTTPException(404, detail="Simulation candidate not found")
+    experiments = _linked_experiments(db, candidate_id)
+    predicted = _predicted_numeric_values(candidate)
+    comparisons: list[MetricComparisonResponse] = []
+    for experiment in experiments:
+        metrics = _json_or_none(experiment.metrics) or {}
+        for metric, measured in metrics.items():
+            if metric not in predicted or not isinstance(measured, int | float):
+                continue
+            predicted_value = predicted[metric]
+            absolute_delta = float(measured) - predicted_value
+            percent_delta = None if predicted_value == 0 else absolute_delta / predicted_value * 100
+            comparisons.append(MetricComparisonResponse(
+                metric=metric,
+                predicted=round(predicted_value, 4),
+                measured=round(float(measured), 4),
+                absolute_delta=round(absolute_delta, 4),
+                percent_delta=None if percent_delta is None else round(percent_delta, 2),
+            ))
+    return CandidateFeedbackResponse(
+        candidate_id=candidate.id,
+        run_id=candidate.run_id,
+        status=candidate.status,
+        experiment_count=len(experiments),
+        comparisons=comparisons,
+        summary=_feedback_summary(experiments, comparisons),
+    )
+
+
 @router.post("/compare/blends", response_model=BlendCompareResponse)
 def compare_blends(body: BlendCompareRequest, db: Session = Depends(get_db)):
     application = db.query(Application).filter(Application.name == body.application).first()
@@ -380,8 +447,76 @@ def _candidate_response(candidate: SimulationCandidate) -> CandidateResponse:
     )
 
 
+def _candidate_experiment_response(
+    experiment: ExperimentResult,
+    candidate_id: int,
+) -> CandidateExperimentResponse:
+    return CandidateExperimentResponse(
+        id=experiment.id,
+        blend_id=experiment.blend_id,
+        candidate_id=candidate_id,
+        conditions=_json_or_none(experiment.conditions) or {},
+        metrics=_json_or_none(experiment.metrics) or {},
+        created_at=experiment.created_at.isoformat(),
+    )
+
+
 def _json_or_none(value: str | None) -> dict[str, Any] | None:
     return json.loads(value) if value else None
+
+
+def _linked_experiments(db: Session, candidate_id: int) -> list[ExperimentResult]:
+    linked = []
+    for experiment in db.query(ExperimentResult).order_by(ExperimentResult.created_at.desc(), ExperimentResult.id.desc()).all():
+        conditions = _json_or_none(experiment.conditions) or {}
+        if conditions.get("candidate_id") == candidate_id:
+            linked.append(experiment)
+    return linked
+
+
+def _predicted_numeric_values(candidate: SimulationCandidate) -> dict[str, float]:
+    values: dict[str, float] = {}
+    for payload in (
+        _json_or_none(candidate.metrics) or {},
+        _json_or_none(candidate.properties) or {},
+        {
+            "score": candidate.score,
+            "process_score": candidate.process_score,
+            "blend_score": candidate.blend_score,
+            "flavor_score": candidate.flavor_score,
+        },
+    ):
+        for key, value in payload.items():
+            if isinstance(value, int | float):
+                values[key] = float(value)
+    return values
+
+
+def _feedback_summary(
+    experiments: list[ExperimentResult],
+    comparisons: list[MetricComparisonResponse],
+) -> dict[str, Any]:
+    if not experiments:
+        return {
+            "status": "no_experiments",
+            "message": "No physical test results are linked to this candidate yet.",
+        }
+    if not comparisons:
+        return {
+            "status": "no_comparable_metrics",
+            "message": "Linked experiments exist, but no measured metric names match predicted numeric fields.",
+        }
+    abs_pct = [abs(item.percent_delta) for item in comparisons if item.percent_delta is not None]
+    mean_abs_percent_delta = None if not abs_pct else round(sum(abs_pct) / len(abs_pct), 2)
+    largest = max(comparisons, key=lambda item: abs(item.absolute_delta))
+    return {
+        "status": "compared",
+        "message": "Measured physical results were compared against saved simulation predictions.",
+        "experiment_count": len(experiments),
+        "metric_count": len(comparisons),
+        "mean_abs_percent_delta": mean_abs_percent_delta,
+        "largest_absolute_delta": largest.model_dump(),
+    }
 
 
 def _promote_candidate_to_blend(
