@@ -26,6 +26,14 @@ from glutenix.api.routers.optimization import (
     SuggestIngredient,
     suggest_for_application,
 )
+from glutenix.api.routers.internal import (
+    CompareItemRequest,
+    CompareWeights,
+    ProcessRangeRequest as InternalProcessRange,
+    SensitivityPerturbationRequest,
+    SensitivityRequest,
+    run_sensitivity_analysis,
+)
 from glutenix.analysis.cohort import CohortFilters, analyze_candidate_cohort
 from glutenix.calibration.coverage import assess_literature_coverage, build_domain_coverage
 from glutenix.db.base import Base, SessionLocal
@@ -558,6 +566,37 @@ def _parse_ingredient_bound(value: str) -> IngredientBound:
     return IngredientBound(name.strip(), min_proportion, max_proportion)
 
 
+def _parse_named_proportion(value: str) -> tuple[str, float]:
+    try:
+        name, proportion_value = value.rsplit(":", 1)
+        proportion = float(proportion_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "ingredient proportions must use 'Ingredient name:proportion', for example 'Sorghum flour:0.40'"
+        ) from exc
+    if not name.strip():
+        raise argparse.ArgumentTypeError("ingredient name cannot be empty")
+    if proportion <= 0 or proportion > 1:
+        raise argparse.ArgumentTypeError("ingredient proportion must satisfy 0 < proportion <= 1")
+    return name.strip(), proportion
+
+
+def _parse_perturbation(value: str) -> SensitivityPerturbationRequest:
+    try:
+        name, delta_value = value.rsplit(":", 1)
+        delta = float(delta_value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "perturbations must use 'Ingredient name:delta', for example 'Pea protein powder:0.02'"
+        ) from exc
+    if not name.strip():
+        raise argparse.ArgumentTypeError("perturbation ingredient cannot be empty")
+    try:
+        return SensitivityPerturbationRequest(ingredient=name.strip(), delta=delta)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
 def _sample_bounded_proportions(
     items: list[tuple[Ingredient, float, float]],
     rng: random.Random,
@@ -954,6 +993,60 @@ def _cohort_analyze_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _sensitivity_analyze_command(args: argparse.Namespace) -> int:
+    sources = [args.candidate_id is not None, args.blend_id is not None, bool(args.ingredient)]
+    if sum(sources) != 1:
+        raise SystemExit("Provide exactly one of --candidate-id, --blend-id, or repeated --ingredient.")
+    proportions = dict(args.ingredient or []) or None
+    process_bounds = ProcessBounds(
+        fermentation_temp_c=tuple(args.fermentation_temp),
+        fermentation_duration_min=tuple(args.fermentation_duration),
+        baking_temp_c=tuple(args.baking_temp),
+        baking_duration_min=tuple(args.baking_duration),
+    )
+    request = SensitivityRequest(
+        application=args.application,
+        base=CompareItemRequest(
+            candidate_id=args.candidate_id,
+            blend_id=args.blend_id,
+            proportions=proportions,
+        ),
+        perturbations=args.perturb,
+        compensate_with=args.compensate_with,
+        n_process_samples=args.process_samples,
+        seed=args.seed,
+        fermentation_temp=InternalProcessRange(
+            min=process_bounds.fermentation_temp_c[0],
+            max=process_bounds.fermentation_temp_c[1],
+        ),
+        fermentation_duration=InternalProcessRange(
+            min=process_bounds.fermentation_duration_min[0],
+            max=process_bounds.fermentation_duration_min[1],
+        ),
+        baking_temp=InternalProcessRange(
+            min=process_bounds.baking_temp_c[0],
+            max=process_bounds.baking_temp_c[1],
+        ),
+        baking_duration=InternalProcessRange(
+            min=process_bounds.baking_duration_min[0],
+            max=process_bounds.baking_duration_min[1],
+        ),
+        weights=CompareWeights(process=args.w_process, blend=args.w_blend, flavor=args.w_flavor),
+    )
+    session = _persistent_session()
+    try:
+        result = run_sensitivity_analysis(session, request).model_dump()
+        _print_sensitivity_analysis(result)
+        if args.json:
+            path = Path(args.json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"JSON written to {args.json}")
+    finally:
+        session.close()
+    return 0
+
+
 def _format_datetime(value: datetime) -> str:
     return value.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -996,6 +1089,30 @@ def _print_cohort_analysis(result: dict[str, Any]) -> None:
                 f"{name:<24} {summary['count']:<5} {summary['min']:<8.4f} "
                 f"{summary['mean']:<8.4f} {summary['max']:<8.4f}"
             )
+
+
+def _print_sensitivity_analysis(result: dict[str, Any]) -> None:
+    base = result["base"]
+    print(
+        f"application={result['application']} target={result['target_profile']} "
+        f"base_score={base['score']:.4f}"
+    )
+    print("variant score d_score d_process d_blend d_flavor d_protein d_viscosity d_volume d_hardness")
+    for variant in result["variants"]:
+        deltas = variant["deltas"]
+        row = variant["result"]
+        print(
+            f"{variant['name']:<32} "
+            f"{row['score']:<6.4f} "
+            f"{deltas.get('score', 0):<7.4f} "
+            f"{deltas.get('process_score', 0):<9.4f} "
+            f"{deltas.get('blend_score', 0):<7.4f} "
+            f"{deltas.get('flavor_score', 0):<8.4f} "
+            f"{deltas.get('properties.protein_pct', 0):<9.4f} "
+            f"{deltas.get('properties.viscosity_index', 0):<11.4f} "
+            f"{deltas.get('bread_metrics.specific_volume_cm3_g', 0):<8.4f} "
+            f"{deltas.get('bread_metrics.crumb_hardness_n', 0):<8.4f}"
+        )
 
 
 def _saved_primary_metric(metrics: dict[str, Any]) -> str:
@@ -1096,6 +1213,35 @@ def build_parser() -> argparse.ArgumentParser:
     cohort_analyze.add_argument("--limit", type=int, help="Limit candidates after sorting by score.")
     cohort_analyze.add_argument("--json", help="Optional JSON output path.")
     cohort_analyze.set_defaults(func=_cohort_analyze_command)
+
+    sensitivity = subparsers.add_parser("sensitivity", help="Analyze local ingredient perturbations.")
+    sensitivity_subparsers = sensitivity.add_subparsers(dest="sensitivity_command", required=True)
+    sensitivity_analyze = sensitivity_subparsers.add_parser("analyze", help="Compare perturbations against a base formula.")
+    sensitivity_analyze.add_argument("--application", default="Pane", help="Application name, for example Pane.")
+    sensitivity_analyze.add_argument("--candidate-id", type=int, help="Use a saved simulation candidate as the base formula.")
+    sensitivity_analyze.add_argument("--blend-id", type=int, help="Use a saved blend as the base formula.")
+    sensitivity_analyze.add_argument(
+        "--ingredient",
+        action="append",
+        type=_parse_named_proportion,
+        help="Custom base ingredient as 'Ingredient name:proportion'. Repeat for custom formulas.",
+    )
+    sensitivity_analyze.add_argument(
+        "--perturb",
+        action="append",
+        type=_parse_perturbation,
+        required=True,
+        help="Perturbation as 'Ingredient name:delta'. Repeat for multiple variants.",
+    )
+    sensitivity_analyze.add_argument("--compensate-with", required=True, help="Ingredient adjusted by -delta.")
+    sensitivity_analyze.add_argument("--process-samples", type=int, default=40)
+    sensitivity_analyze.add_argument("--seed", type=int, default=None)
+    sensitivity_analyze.add_argument("--w-process", type=float, default=0.55)
+    sensitivity_analyze.add_argument("--w-blend", type=float, default=0.25)
+    sensitivity_analyze.add_argument("--w-flavor", type=float, default=0.20)
+    _add_process_bound_args(sensitivity_analyze)
+    sensitivity_analyze.add_argument("--json", help="Optional JSON output path.")
+    sensitivity_analyze.set_defaults(func=_sensitivity_analyze_command)
 
     return parser
 

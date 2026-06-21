@@ -746,3 +746,40 @@ class TestInternalWorkflow:
         assert payload["ranking"][0]["rank"] == 1
         assert payload["ranking"][0]["bread_metrics"]["specific_volume_cm3_g"] > 0
         assert "flavor_score" in payload["ranking"][0]
+
+    def test_sensitivity_analyzes_candidate_perturbations(self):
+        candidate = _create_test_candidate()
+
+        resp = client.post("/analyze/sensitivity", json={
+            "application": "Pane",
+            "base": {"candidate_id": candidate.id},
+            "perturbations": [
+                {"ingredient": "Tapioca starch", "delta": 0.02},
+                {"ingredient": "Xanthan gum", "delta": 0.002},
+            ],
+            "compensate_with": "White rice flour",
+            "n_process_samples": 5,
+            "seed": 77,
+        })
+
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        assert payload["application"] == "Pane"
+        assert payload["base"]["score"] > 0
+        assert len(payload["variants"]) == 2
+        assert payload["variants"][0]["deltas"]["properties.protein_pct"] != 0
+        assert payload["variants"][0]["result"]["bread_metrics"]["specific_volume_cm3_g"] > 0
+
+    def test_sensitivity_rejects_invalid_perturbation(self):
+        candidate = _create_test_candidate()
+
+        resp = client.post("/analyze/sensitivity", json={
+            "application": "Pane",
+            "base": {"candidate_id": candidate.id},
+            "perturbations": [{"ingredient": "White rice flour", "delta": 0.9}],
+            "compensate_with": "Tapioca starch",
+            "n_process_samples": 5,
+            "seed": 77,
+        })
+
+        assert resp.status_code == 400

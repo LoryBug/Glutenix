@@ -189,6 +189,17 @@ uv run glutenix cohort analyze --application Pane --preset bobs-inspired --max-r
 
 Add `--status test_next`, `--status promising`, `--run-id 13`, or `--json cohort.json` for filtered or machine-readable analysis.
 
+To test local formulation levers around a saved candidate:
+
+```bash
+uv run glutenix sensitivity analyze --application Pane --candidate-id 61 \
+  --perturb "Pea protein powder:0.02" \
+  --perturb "Xanthan gum:0.003" \
+  --compensate-with "Sorghum flour"
+```
+
+Sensitivity analysis is diagnostic: it compares variant predictions against the base formula without mutating saved candidates or recalibrating the model.
+
 ### Bayesian Optimization And GPR
 
 The project includes Gaussian Process Regression and Bayesian Optimization components so that real experimental results can eventually guide future suggestions.
@@ -286,6 +297,7 @@ Main endpoints:
 | `GET /simulation-candidates/{id}/feedback` | Compare measured experiment metrics against candidate predictions |
 | `POST /experiments/from-candidate` | Store measured results linked back to a candidate/run |
 | `POST /compare/blends` | Compare candidate, saved blend, and custom formulas with process/blend/flavor scoring |
+| `POST /analyze/sensitivity` | Compare ingredient perturbations against a base formula |
 
 Example pasta cooking request:
 
