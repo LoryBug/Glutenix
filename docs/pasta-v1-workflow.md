@@ -39,13 +39,15 @@ Do not interpret bread metrics such as loaf volume or crumb hardness as pasta ou
 
 - The ranking path uses `PastaCookingSimulator`, not the bread simulator.
 - Process search is mapped to cooking water temperature and cooking time.
-- The current CLI path uses a generic fresh-pasta mode, not a fully calibrated calcium-bath or dried-extruded process.
+- When sodium alginate is present, the current CLI path uses a calcium-alginate fresh-pasta starting point: `water_temp_c=100.0`, `water_to_flour_ratio=3.0`, `calcium_lactate_m=0.1`, and `calcium_bath_time_min=30.0`.
+- Non-alginate pasta formulas fall back to generic fresh-pasta assumptions.
 - Flavor fit remains heuristic and not sensory-panel calibrated.
 
 ## Evidence Limits
 
 - Literature coverage for pasta is narrower than the Pane workflow.
 - Some literature uses `water_absorption_pct`; Glutenix V1 records the simulator output as `water_uptake_pct` for prediction-feedback consistency.
+- Calcium-alginate process settings are literature-aligned starting assumptions, not validated lab instructions for every formula.
 - The first Pasta candidates should be treated as hypotheses for cooking tests, not validated recipes.
 
 ## Next Lab Measurements
@@ -53,6 +55,7 @@ Do not interpret bread metrics such as loaf volume or crumb hardness as pasta ou
 When a Pasta candidate is physically tested, record:
 
 - cooking time and water temperature actually used
+- water-to-flour ratio and calcium bath conditions if used
 - dry pasta/formula mass
 - cooked mass or water uptake
 - cooking loss in cooking water

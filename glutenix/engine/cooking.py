@@ -342,3 +342,41 @@ class PastaCookingSimulator:
             calibration_score=round(calibration_score, 4),
             calibration_notes=notes,
         )
+
+
+def pasta_v1_process_params(
+    blend_props: BlendProperties,
+    *,
+    water_temp_c: float,
+    cooking_time_min: float,
+) -> PastaCookingParams:
+    alginate = PastaCookingSimulator._ingredient_fraction(blend_props, "alginate")
+    if alginate > 0:
+        return PastaCookingParams(
+            water_temp_c=100.0,
+            cooking_time_min=cooking_time_min,
+            pasta_thickness_mm=2.0,
+            water_to_flour_ratio=3.0,
+            calcium_lactate_m=0.1,
+            calcium_bath_time_min=30.0,
+        )
+    return PastaCookingParams(
+        water_temp_c=water_temp_c,
+        cooking_time_min=cooking_time_min,
+        pasta_thickness_mm=2.0,
+        water_to_flour_ratio=0.9,
+    )
+
+
+def serialize_pasta_process_params(params: PastaCookingParams) -> dict[str, float]:
+    payload = {
+        "water_temp_c": params.water_temp_c,
+        "cooking_time_min": params.cooking_time_min,
+        "pasta_thickness_mm": params.pasta_thickness_mm,
+        "water_to_flour_ratio": params.water_to_flour_ratio,
+    }
+    if params.calcium_lactate_m > 0:
+        payload["calcium_lactate_m"] = params.calcium_lactate_m
+    if params.calcium_bath_time_min > 0:
+        payload["calcium_bath_time_min"] = params.calcium_bath_time_min
+    return {key: value for key, value in payload.items() if value is not None}

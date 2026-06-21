@@ -21,7 +21,7 @@ from glutenix.engine.confidence import (
     assess_candidate_confidence,
     serialize_candidate_confidence,
 )
-from glutenix.engine.cooking import PastaCookingParams, PastaCookingSimulator
+from glutenix.engine.cooking import PastaCookingSimulator, pasta_v1_process_params, serialize_pasta_process_params
 from glutenix.engine.flavor import (
     APPLICATION_FLAVOR_TARGETS,
     DEFAULT_FLAVOR_TARGET,
@@ -335,26 +335,22 @@ def suggest_for_application(body: ApplicationSuggestRequest, db: Session = Depen
         if is_pasta:
             best_cooking = None
             best_point = None
+            best_params = None
             for point in process_points:
-                cooking = PastaCookingSimulator(
-                    PastaCookingParams(
-                        water_temp_c=point["baking_temp_c"],
-                        cooking_time_min=point["baking_duration_min"],
-                        water_to_flour_ratio=0.9,
-                    )
-                ).simulate(blend_props)
+                params = pasta_v1_process_params(
+                    blend_props,
+                    water_temp_c=point["baking_temp_c"],
+                    cooking_time_min=point["baking_duration_min"],
+                )
+                cooking = PastaCookingSimulator(params).simulate(blend_props)
                 if best_cooking is None or cooking.quality_score > best_cooking.quality_score:
                     best_cooking = cooking
                     best_point = point
-            if best_cooking is None or best_point is None:
+                    best_params = params
+            if best_cooking is None or best_point is None or best_params is None:
                 continue
             process_score = best_cooking.quality_score
-            process_data = {
-                "water_temp_c": best_point["baking_temp_c"],
-                "cooking_time_min": best_point["baking_duration_min"],
-                "pasta_thickness_mm": 2.0,
-                "water_to_flour_ratio": 0.9,
-            }
+            process_data = serialize_pasta_process_params(best_params)
             cooking_metrics = {
                 "water_uptake_pct": best_cooking.water_uptake_pct,
                 "cooking_loss_pct": best_cooking.cooking_loss_pct,
