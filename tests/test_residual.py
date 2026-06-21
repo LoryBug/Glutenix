@@ -30,15 +30,15 @@ class TestResidualDataset:
         session = _seeded_session()
         try:
             ds = build_bread_dataset(session)
-            assert ds["n_records"] == 60
+            assert ds["n_records"] == 65
             assert "specific_volume_cm3_g" in ds["dataset"]
             assert "crumb_hardness_n" in ds["dataset"]
             assert "porosity_pct" in ds["dataset"]
             vol_data = ds["dataset"]["specific_volume_cm3_g"]
-            assert vol_data["X"].shape[0] == 54
-            assert vol_data["y_true"].shape[0] == 54
-            assert vol_data["y_sim"].shape[0] == 54
-            assert len(vol_data["sources"]) == 54
+            assert vol_data["X"].shape[0] == 59
+            assert vol_data["y_true"].shape[0] == 59
+            assert vol_data["y_sim"].shape[0] == 59
+            assert len(vol_data["sources"]) == 59
             assert "tg_pct" in BREAD_PROCESS_FEATURES
         finally:
             session.close()
@@ -73,9 +73,9 @@ class TestBenchmarkBread:
         try:
             results = benchmark_bread(session)
             vol_result = [r for r in results if r.metric == "specific_volume_cm3_g"][0]
-            assert vol_result.n_records == 54
-            assert vol_result.n_sources == 8
-            assert len(vol_result.source_folds) == 8
+            assert vol_result.n_records == 59
+            assert vol_result.n_sources == 9
+            assert len(vol_result.source_folds) == 9
         finally:
             session.close()
 

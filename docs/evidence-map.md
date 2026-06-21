@@ -120,8 +120,8 @@ Current model support:
 
 Structured records:
 
-- 60 total records.
-- 9 peer-reviewed sources.
+- 65 total records.
+- 10 peer-reviewed sources.
 - 9 proso millet cultivar bread records.
 - 4 commercial gluten-free bread mix additive-removal records.
 - 2 rice/chickpea/whey protein bread records (Loncaric 2026).
@@ -131,6 +131,7 @@ Structured records:
 - 6 pea-protein-enriched breads at 0-25% substitution (Wojcik 2021).
 - 9 tapioca starch/red lentil flour mixture design bread records (Bianchi 2026).
 - 15 quinoa flour + HPMC + TG CCD design bread records (Ghodosipoor 2025).
+- 5 quinoa/rice/potato starch hydrocolloid bread records (Di Renzo 2024).
 
 Current sources:
 
@@ -143,10 +144,11 @@ Current sources:
 - Kahraman et al. 2022, DOI `10.3390/foods11020199`, raw/roasted/dehulled chickpea flour in rice-based gluten-free bread.
 - Bianchi et al. 2026, DOI `10.3390/foods15071230`, tapioca starch/red lentil flour mixture design gluten-free bread with guar gum.
 - Ghodosipoor et al. 2025, DOI `10.1002/fsn3.70891`, quinoa flour + HPMC + microbial transglutaminase CCD gluten-free bread optimization.
+- Di Renzo et al. 2024, DOI `10.3390/foods13091382`, quinoa/rice/potato gluten-free bread with HPMC, xanthan, sodium alginate, and kappa carrageenan.
 
 Current limitations:
 
-- Specific volume is the only broadly covered metric.
+- Specific volume is the broadest metric with 59 structured records.
 - Crumb hardness has 40 structured records across six sources.
 - Porosity has 11 structured records across three sources (Loncaric 2026, Parsamajd 2025, Kahraman 2022), but values may depend strongly on image-analysis method.
 - Bread coverage confidence now separates range coverage from mechanism/calibration reliability; TG/enzyme and sparse quinoa cases are downgraded even when numeric ranges pass.
@@ -337,7 +339,7 @@ Recommended next action:
 | Fresh calcium-gel pasta | Medium-high | 30 records from Lux 2023 |
 | Dried extruded rice pasta | Medium | 10 records from Liu 2026 and Detchewa 2016 |
 | Generic fresh pasta | Low | Heuristic fallback only |
-| Yeast-fermented bread | Medium-low | 60 records from 9 sources, specific volume and crumb hardness from hydrocolloid and protein-enriched families |
+| Yeast-fermented bread | Medium-low | 65 records from 10 sources, specific volume and crumb hardness from hydrocolloid and protein-enriched families |
 | High-temperature pizza baking | Low | Simulated but not literature-calibrated |
 | Sweet enriched leavened dough | Low | Simulated but not literature-calibrated |
 | Shortcrust/biscuit baking | Low | Simulated but not literature-calibrated |

@@ -96,8 +96,8 @@ The search prioritized papers with extractable quantitative tables for:
 
 ## Recommended Follow-Up Issues
 
-1. **Extract remaining quinoa/HPMC/enzyme bread records**: Di Renzo 2024. Ghodosipoor 2025 is already structured in `bread_baking.jsonl`. Focus on HPMC, hydrocolloid type, gas retention, specific volume, hardness, bake loss, moisture.
-2. **Extract remaining starch/legume bread mixture-design records**: Sanchez 2002 and Santos 2018 if individual response values can be recovered. Bianchi 2026 is already structured in `bread_baking.jsonl`.
+1. **Extract remaining starch/legume bread mixture-design records**: Sanchez 2002 and Santos 2018 if individual response values can be recovered. Bianchi 2026 is already structured in `bread_baking.jsonl`.
+2. **Expand bread texture coverage**: prioritize papers with table-backed crumb hardness/firmness, because Di Renzo 2024 adds useful hydrocolloid volume/bake-loss data but no crumb-hardness table.
 3. **Extract pasta process-response records**: Bouasla & Wojtowicz 2019 and 2021. Focus on extrusion moisture, temperature, screw speed, cooking loss, texture, WAC.
 4. **Extract protein/fiber-enriched pasta records**: Pasini 2025, Bolarinwa & Oyesiji 2021, Laleg 2016. Focus on ingredient substitution, cooking loss, firmness, water absorption, sensory.
 5. **Extract ingredient-parameter records**: Marco & Rosell 2008, Quiñones 2015, Mancebo 2015. Focus on water binding, proximate composition, rheology, hydrocolloid/protein parameters.

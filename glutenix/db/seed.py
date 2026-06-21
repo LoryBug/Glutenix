@@ -262,6 +262,16 @@ def _seed_ingredients(session):
             kcal_per_100g=200.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=9000.0,
         ),
         Ingredient(
+            name="Kappa carrageenan",
+            category="hydrocolloid",
+            scientific_name="Kappa carrageenan",
+            description="Sulfated seaweed polysaccharide hydrocolloid used for gelation and water binding",
+            protein_pct=0.0, starch_pct=0.0, fat_pct=0.0,
+            fiber_pct=80.0, moisture_pct=12.0, ash_pct=8.0,
+            water_absorption=18.0,
+            kcal_per_100g=200.0, sugars_pct=0.0, saturated_fat_pct=0.0, sodium_mg_per_100g=2500.0,
+        ),
+        Ingredient(
             name="High-amylose rice flour",
             category="flour",
             scientific_name="Oryza sativa high-amylose cultivar",
