@@ -8,6 +8,8 @@ Gluten-free formulation is difficult because small changes in flour, starch, hyd
 
 The project is not a replacement for lab or kitchen testing. It is a decision-support tool for narrowing the search space.
 
+For a concise demo script and positioning language, see `docs/demo-narrative.md`.
+
 ## What It Does
 
 Glutenix models gluten-free formulations from ingredients and process parameters, then scores or optimizes them for specific applications.
