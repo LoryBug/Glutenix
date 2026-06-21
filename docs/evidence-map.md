@@ -17,6 +17,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 
 ## Current Domain Coverage
 
+<!-- generated-start: evidence-domain-coverage -->
 | Domain | Current Evidence | Records | Sources | Main Metrics | Current Confidence | Next Priority |
 |---|---:|---:|---:|---|---|---|
 | Pasta cooking | `calibrated` | 42 | 5 | Cooking loss, water uptake, swelling | Medium-high | Add more dried/fresh pasta systems and texture data |
@@ -27,6 +28,7 @@ The evidence map is intentionally conservative. A model can be useful before it 
 | Biscuits/cookies | `heuristic` | 0 | 0 | Low expansion, crispness proxies | Low | Add biscuit/cookie texture papers later |
 | Flavor | `heuristic` | 0 | 0 | Flavor profile proxy | Low | Needs sensory panel literature or internal tests |
 | Nutrition | `literature-informed` | Seed data | Mixed source values | Macro estimates | Medium for approximate labels | Needs source-level ingredient provenance |
+<!-- generated-end: evidence-domain-coverage -->
 
 ## Simulator Coverage
 

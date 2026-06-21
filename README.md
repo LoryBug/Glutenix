@@ -336,12 +336,21 @@ uv run python scripts/update_calibration_reports.py --write
 
 Use `--check` in validation to fail when generated report tables are stale.
 
+Generated citation/evidence docs can be refreshed and validated with:
+
+```bash
+uv run python scripts/generate_bibliography.py
+uv run python scripts/generate_evidence_summary.py
+uv run python scripts/validate_doc_counts.py
+```
+
 Useful files:
 
 - `data/literature/sources.json`
 - `data/literature/pasta_cooking.jsonl`
 - `data/literature/bread_baking.jsonl`
 - `docs/generated/bibliography.md`
+- `docs/generated/evidence-summary.md`
 - `docs/pasta-cooking-calibration-report.md`
 - `docs/bread-baking-calibration-report.md`
 - `docs/literature-extraction-template.md`
